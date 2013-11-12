@@ -1,24 +1,98 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"github.com/ActiveState/tail"
+	"github.com/sevenscale/remote_syslog2/papertrail"
 	"github.com/sevenscale/remote_syslog2/syslog"
+	"github.com/sevenscale/remote_syslog2/syslog/certs"
+	"io/ioutil"
 	"log"
+	"os"
+	"path"
 	"time"
 )
 
-func main() {
-	c, err := syslog.Dial("tcp", "localhost:1234", nil)
+func tailFile(file string, logger *syslog.Conn) error {
+	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: false, Location: &tail.SeekInfo{0, os.SEEK_END}}
+	t, err := tail.TailFile(file, tailConfig)
+
 	if err != nil {
-		log.Fatalf("failed to dial: %v", err)
+		log.Println(err)
+		return err
 	}
 
-	p := syslog.Packet{
-		Severity: syslog.SevCrit,
-		Facility: syslog.LogAuth,
-		Time:     time.Now(),
-		Hostname: "mymachine.example.com",
-		Tag:      "su",
-		Message:  "hello",
+	for line := range t.Lines {
+		p := syslog.Packet{
+			Severity: syslog.SevInfo,
+			Facility: syslog.LogLocal1, // todo: customize this
+			Time:     time.Now(),
+			Hostname: "mymachine.example.com", // todo
+			Tag:      path.Base(file),
+			Message:  line.Text,
+		}
+		err = logger.WritePacket(p)
+		if err != nil {
+			return err
+		}
+
 	}
-	log.Println(c.WritePacket(p))
+
+	return errors.New("Tail worker executed abnormally")
+}
+
+type ConfigFile struct {
+	Files       []string
+	Destination struct {
+		Host     string
+		Port     int
+		Protocol string
+	}
+	CABundle string `json:"ca_bundle"`
+}
+
+func main() {
+	configFile := flag.String("config", "/etc/remote_syslog2/config.json", "the configuration file")
+	flag.Parse()
+
+	log.Printf("Reading configuration file %s", *configFile)
+	file, err := ioutil.ReadFile(*configFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	var config ConfigFile
+	err = json.Unmarshal(file, &config)
+	if err != nil {
+		fmt.Println("The configfile is invalid: ", err)
+		os.Exit(1)
+	}
+
+	destination := fmt.Sprintf("%s:%d", config.Destination.Host, config.Destination.Port)
+	cabundle := certs.NewCertBundle()
+	if config.CABundle == "" {
+		cabundle.LoadDefaultBundle()
+		cabundle.ImportBytes(papertrail.BundleCert())
+	} else {
+		cabundle.ImportFromFile(config.CABundle)
+	}
+
+	log.Printf("Connecting to %s over %s", destination, config.Destination.Protocol)
+	logger, err := syslog.Dial(config.Destination.Protocol, destination, &cabundle)
+
+	if err != nil {
+		log.Fatalf("Cannot connect to server: %v", err)
+	}
+
+	for _, file := range config.Files {
+		log.Printf("Forwarding %s", file)
+		go tailFile(file, logger)
+	}
+
+	ch := make(chan bool)
+	<-ch
 }
