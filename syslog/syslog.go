@@ -8,10 +8,11 @@ import (
 )
 
 type Conn struct {
-	conn net.Conn
+	hostname string
+	conn     net.Conn
 }
 
-func Dial(network, raddr string, bundle *certs.CertBundle) (*Conn, error) {
+func Dial(network, raddr, hostname string, bundle *certs.CertBundle) (*Conn, error) {
 	var conn net.Conn
 	var err error
 
@@ -27,9 +28,18 @@ func Dial(network, raddr string, bundle *certs.CertBundle) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		// todo: store hostname?
-		return &Conn{conn}, nil
+		if hostname == "" {
+			hostname, _, err = net.SplitHostPort(conn.LocalAddr().String())
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &Conn{conn: conn, hostname: hostname}, nil
 	}
+}
+
+func (c Conn) Hostname() string {
+	return c.hostname
 }
 
 func (c Conn) WritePacket(p Packet) error {

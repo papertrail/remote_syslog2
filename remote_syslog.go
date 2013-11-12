@@ -30,7 +30,7 @@ func tailFile(file string, logger *syslog.Conn) error {
 			Severity: syslog.SevInfo,
 			Facility: syslog.LogLocal1, // todo: customize this
 			Time:     time.Now(),
-			Hostname: "mymachine.example.com", // todo
+			Hostname: logger.Hostname(),
 			Tag:      path.Base(file),
 			Message:  line.Text,
 		}
@@ -58,6 +58,9 @@ func main() {
 	configFile := flag.String("config", "/etc/remote_syslog2/config.json", "the configuration file")
 	flag.Parse()
 
+	// ignore error, we'll use the local addr when we connect
+	hostname, _ := os.Hostname()
+
 	log.Printf("Reading configuration file %s", *configFile)
 	file, err := ioutil.ReadFile(*configFile)
 	if err != nil {
@@ -82,7 +85,7 @@ func main() {
 	}
 
 	log.Printf("Connecting to %s over %s", destination, config.Destination.Protocol)
-	logger, err := syslog.Dial(config.Destination.Protocol, destination, &cabundle)
+	logger, err := syslog.Dial(config.Destination.Protocol, destination, hostname, &cabundle)
 
 	if err != nil {
 		log.Fatalf("Cannot connect to server: %v", err)
