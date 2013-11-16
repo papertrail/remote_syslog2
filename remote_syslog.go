@@ -51,15 +51,13 @@ type ConfigFile struct {
 		Port     int
 		Protocol string
 	}
+	Hostname string
 	CABundle string `json:"ca_bundle"`
 }
 
 func main() {
 	configFile := flag.String("config", "/etc/remote_syslog2/config.json", "the configuration file")
 	flag.Parse()
-
-	// ignore error, we'll use the local addr when we connect
-	hostname, _ := os.Hostname()
 
 	log.Printf("Reading configuration file %s", *configFile)
 	file, err := ioutil.ReadFile(*configFile)
@@ -73,6 +71,14 @@ func main() {
 	if err != nil {
 		fmt.Println("The configfile is invalid: ", err)
 		os.Exit(1)
+	}
+
+	var hostname string
+	if config.Hostname == "" {
+		// ignore error, we'll use the local addr when we connect
+		hostname, _ = os.Hostname()
+	} else {
+		hostname = config.Hostname
 	}
 
 	destination := fmt.Sprintf("%s:%d", config.Destination.Host, config.Destination.Port)
