@@ -56,17 +56,12 @@ type ConfigFile struct {
 }
 
 func (c ConfigFile) GetHostname() string {
-	var hostname string
-	switch {
-	case configHostname != "":
+	if configHostname != "" {
 		return configHostname
-	case c.Hostname != "":
+	} else {
 		return c.Hostname
 	}
-	// This maybe be and empty string. If so syslog.Dial will try harder to
-	// resolve a host name.
-	hostname, _ = os.Hostname()
-	return hostname
+
 }
 
 var configHostname string
@@ -77,7 +72,7 @@ func main() {
 	flag.Parse()
 
 	log.Printf("Reading configuration file %s", configFile)
-	file, err := ioutil.ReadFile(configFile)
+	file, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -91,6 +86,9 @@ func main() {
 	}
 
 	hostname := config.GetHostname()
+	if hostname == "" {
+		hostname, _ = os.Hostname()
+	}
 
 	destination := fmt.Sprintf("%s:%d", config.Destination.Host, config.Destination.Port)
 	cabundle := certs.NewCertBundle()
