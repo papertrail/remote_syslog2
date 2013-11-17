@@ -55,12 +55,29 @@ type ConfigFile struct {
 	CABundle string `json:"ca_bundle"`
 }
 
+func (c ConfigFile) GetHostname() string {
+	var hostname string
+	switch {
+	case configHostname != "":
+		return configHostname
+	case c.Hostname != "":
+		return c.Hostname
+	}
+	// This maybe be and empty string. If so syslog.Dial will try harder to
+	// resolve a host name.
+	hostname, _ = os.Hostname()
+	return hostname
+}
+
+var configHostname string
+
 func main() {
 	configFile := flag.String("config", "/etc/remote_syslog2/config.json", "the configuration file")
+	flag.StringVar(&configHostname, "hostname", "", "the name of this host")
 	flag.Parse()
 
-	log.Printf("Reading configuration file %s", *configFile)
-	file, err := ioutil.ReadFile(*configFile)
+	log.Printf("Reading configuration file %s", configFile)
+	file, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -73,13 +90,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var hostname string
-	if config.Hostname == "" {
-		// ignore error, we'll use the local addr when we connect
-		hostname, _ = os.Hostname()
-	} else {
-		hostname = config.Hostname
-	}
+	hostname := config.GetHostname()
 
 	destination := fmt.Sprintf("%s:%d", config.Destination.Host, config.Destination.Port)
 	cabundle := certs.NewCertBundle()
