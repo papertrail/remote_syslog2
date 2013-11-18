@@ -55,58 +55,140 @@ type ConfigFile struct {
 	CABundle string `json:"ca_bundle"`
 }
 
-func (c ConfigFile) GetHostname() string {
-	if configHostname != "" {
-		return configHostname
-	} else {
-		return c.Hostname
+type ConfigManager struct {
+	Config ConfigFile
+	Flags  struct {
+		Hostname   string
+		ConfigFile string
 	}
-
+	CertBundle certs.CertBundle
 }
 
-var configHostname string
+func (cm *ConfigManager) Initialize() error {
+	cm.parseFlags()
+
+	err := cm.readConfig()
+	if err != nil {
+		return err
+	}
+
+	err = cm.loadConfigFile()
+	if err != nil {
+		return err
+	}
+
+	err = cm.loadCABundle()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cm *ConfigManager) parseFlags() {
+	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.json", "the configuration file")
+	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
+	flag.Parse()
+}
+
+func (cm *ConfigManager) readConfig() error {
+	log.Printf("Reading configuration file %s", cm.Flags.ConfigFile)
+	err := cm.loadConfigFile()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func (cm *ConfigManager) loadConfigFile() error {
+	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Could not read the config file: %s", err))
+	}
+
+	err = json.Unmarshal(file, &cm.Config)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Could not parse the config file: %s", err))
+	}
+	return nil
+}
+
+func (cm *ConfigManager) loadCABundle() error {
+	bundle := certs.NewCertBundle()
+	if cm.Config.CABundle == "" {
+		log.Printf("Loading default certificates")
+
+		loaded, err := bundle.LoadDefaultBundle()
+		if loaded != "" {
+			log.Printf("Loaded certificates from %s", loaded)
+		}
+		if err != nil {
+			return err
+		}
+
+		err = bundle.ImportBytes(papertrail.BundleCert())
+		if err != nil {
+			return err
+		}
+
+	} else {
+		log.Printf("Loading certificates from %s", cm.Config.CABundle)
+		err := bundle.ImportFromFile(cm.Config.CABundle)
+		if err != nil {
+			return err
+		}
+
+	}
+	cm.CertBundle = bundle
+	return nil
+}
+
+func (cm *ConfigManager) Hostname() string {
+	if cm.Flags.Hostname != "" {
+		return cm.Flags.Hostname
+	} else {
+		return cm.Config.Hostname
+	}
+}
+
+func (cm *ConfigManager) DestHost() string {
+	return cm.Config.Destination.Host
+}
+
+func (cm ConfigManager) DestPort() int {
+	return cm.Config.Destination.Port
+}
+
+func (cm *ConfigManager) DestProtocol() string {
+	return cm.Config.Destination.Protocol
+}
+
+func (cm *ConfigManager) Files() []string {
+	return cm.Config.Files
+}
 
 func main() {
-	configFile := flag.String("config", "/etc/remote_syslog2/config.json", "the configuration file")
-	flag.StringVar(&configHostname, "hostname", "", "the name of this host")
-	flag.Parse()
-
-	log.Printf("Reading configuration file %s", configFile)
-	file, err := ioutil.ReadFile(*configFile)
+	cm := ConfigManager{}
+	err := cm.Initialize()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		fmt.Errorf("Initialization failes %s", err)
 	}
-
-	var config ConfigFile
-	err = json.Unmarshal(file, &config)
-	if err != nil {
-		fmt.Println("The configfile is invalid: ", err)
-		os.Exit(1)
-	}
-
-	hostname := config.GetHostname()
+	hostname := cm.Hostname()
 	if hostname == "" {
 		hostname, _ = os.Hostname()
 	}
 
-	destination := fmt.Sprintf("%s:%d", config.Destination.Host, config.Destination.Port)
-	cabundle := certs.NewCertBundle()
-	if config.CABundle == "" {
-		cabundle.LoadDefaultBundle()
-		cabundle.ImportBytes(papertrail.BundleCert())
-	} else {
-		cabundle.ImportFromFile(config.CABundle)
-	}
+	fmt.Printf("%d", cm.DestPort())
+	destination := fmt.Sprintf("%s:%d", cm.DestHost(), cm.DestPort())
 
-	log.Printf("Connecting to %s over %s", destination, config.Destination.Protocol)
-	logger, err := syslog.Dial(config.Destination.Protocol, destination, hostname, &cabundle)
+	log.Printf("Connecting to %s over %s", destination, cm.DestProtocol())
+	logger, err := syslog.Dial(cm.DestProtocol(), destination, hostname, &cm.CertBundle)
 
 	if err != nil {
 		log.Fatalf("Cannot connect to server: %v", err)
 	}
 
-	for _, file := range config.Files {
+	for _, file := range cm.Files() {
 		log.Printf("Forwarding %s", file)
 		go tailFile(file, logger)
 	}
