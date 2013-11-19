@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/sevenscale/remote_syslog2/syslog/certs"
+	"io"
 	"net"
 )
 
@@ -42,7 +43,18 @@ func (c Conn) Hostname() string {
 	return c.hostname
 }
 
-func (c Conn) WritePacket(p Packet) error {
-	_, err := p.WriteTo(c.conn)
-	return err
+func (c Conn) WritePacket(p Packet) (err error) {
+	// todo: max size?
+	line := p.Generate()
+
+	switch c.conn.(type) {
+	case *net.TCPConn, *tls.Conn:
+		_, err = io.WriteString(c.conn, line+"\n")
+		return err
+	case *net.UDPConn:
+		_, err = io.WriteString(c.conn, line)
+		return err
+	default:
+		panic(fmt.Sprintf("%#v", c.conn))
+	}
 }

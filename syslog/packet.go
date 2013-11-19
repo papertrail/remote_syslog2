@@ -6,7 +6,6 @@ package syslog
 
 import (
 	"fmt"
-	"io"
 	"time"
 )
 
@@ -66,10 +65,8 @@ func (p Packet) Priority() Priority {
 	return (p.Facility << 3) | p.Severity
 }
 
-func (p Packet) WriteTo(w io.Writer) (n int64, err error) {
-	// todo: max size?
-	ts := p.Time.Format(time.RFC3339Nano)
+func (p Packet) Generate() string {
 	// todo: unicode checks / byte order mark
-	i, err := fmt.Fprintf(w, "<%d>1 %s %s %s - - - %s\n", p.Priority(), ts, p.Hostname, p.Tag, p.Message)
-	return int64(i), err
+	ts := p.Time.Format(time.RFC3339Nano)
+	return fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.Message)
 }
