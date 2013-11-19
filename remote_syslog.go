@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"github.com/sevenscale/remote_syslog2/syslog"
 	"github.com/sevenscale/remote_syslog2/syslog/certs"
 	"io/ioutil"
+	"launchpad.net/goyaml"
 	"log"
 	"os"
 	"path"
@@ -52,7 +52,7 @@ type ConfigFile struct {
 		Protocol string
 	}
 	Hostname string
-	CABundle string `json:"ca_bundle"`
+	CABundle string `yaml:"ca_bundle"`
 }
 
 type ConfigManager struct {
@@ -97,7 +97,7 @@ func (cm *ConfigManager) Initialize() error {
 }
 
 func (cm *ConfigManager) parseFlags() {
-	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.json", "the configuration file")
+	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
 	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
 	flag.Parse()
 }
@@ -118,7 +118,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
 
-	err = json.Unmarshal(file, &cm.Config)
+	err = goyaml.Unmarshal(file, &cm.Config)
 	if err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}

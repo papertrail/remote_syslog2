@@ -1,0 +1,7 @@
+files:
+  - locallog.txt
+destination:
+  host: logs.papertrailapp.com
+  port: 514
+  protocol: tls
+hostname: test-host-from-config
