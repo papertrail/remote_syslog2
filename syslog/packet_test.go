@@ -32,8 +32,9 @@ func parseTime(s string) time.Time {
 
 func TestPacketGenerate(t *testing.T) {
 	tests := []struct {
-		packet Packet
-		output string
+		packet   Packet
+		max_size int
+		output   string
 	}{
 		{
 			// from https://tools.ietf.org/html/rfc5424#section-6.5
@@ -46,6 +47,7 @@ func TestPacketGenerate(t *testing.T) {
 				Tag:      "su",
 				Message:  "'su root' failed for lonvick on /dev/pts/8",
 			},
+			0,
 			"<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - - - 'su root' failed for lonvick on /dev/pts/8",
 		},
 		{
@@ -58,11 +60,24 @@ func TestPacketGenerate(t *testing.T) {
 				Tag:      "myproc",
 				Message:  `%% It's time to make the do-nuts.`,
 			},
+			0,
 			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - %% It's time to make the do-nuts.",
+		},
+		{
+			Packet{
+				Severity: SevNotice,
+				Facility: LogLocal4,
+				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Hostname: "192.0.2.1",
+				Tag:      "myproc",
+				Message:  `%% It's time to make the do-nuts.`,
+			},
+			75,
+			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - %% It's time",
 		},
 	}
 	for _, test := range tests {
-		out := test.packet.Generate()
+		out := test.packet.Generate(test.max_size)
 		if out != test.output {
 			t.Errorf("Unexpected output, expected\n%v\ngot\n%v", test.output, out)
 		}

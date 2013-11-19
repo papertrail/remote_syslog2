@@ -65,8 +65,12 @@ func (p Packet) Priority() Priority {
 	return (p.Facility << 3) | p.Severity
 }
 
-func (p Packet) Generate() string {
-	// todo: unicode checks / byte order mark
+func (p Packet) Generate(max_size int) string {
 	ts := p.Time.Format(time.RFC3339Nano)
-	return fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.Message)
+	if max_size == 0 {
+		return fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.Message)
+	} else {
+		msg := fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.Message)
+		return msg[0:max_size]
+	}
 }

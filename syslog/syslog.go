@@ -44,15 +44,12 @@ func (c Conn) Hostname() string {
 }
 
 func (c Conn) WritePacket(p Packet) (err error) {
-	// todo: max size?
-	line := p.Generate()
-
 	switch c.conn.(type) {
 	case *net.TCPConn, *tls.Conn:
-		_, err = io.WriteString(c.conn, line+"\n")
+		_, err = io.WriteString(c.conn, p.Generate(0)+"\n")
 		return err
 	case *net.UDPConn:
-		_, err = io.WriteString(c.conn, line)
+		_, err = io.WriteString(c.conn, p.Generate(1024))
 		return err
 	default:
 		panic(fmt.Sprintf("%#v", c.conn))
