@@ -75,6 +75,18 @@ func TestPacketGenerate(t *testing.T) {
 			75,
 			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - %% It's time",
 		},
+		{
+			Packet{
+				Severity: SevNotice,
+				Facility: LogLocal4,
+				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Hostname: "192.0.2.1",
+				Tag:      "myproc",
+				Message:  "newline:'\n'. nullbyte:'\x00'.",
+			},
+			0,
+			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - newline:' '. nullbyte:' '.",
+		},
 	}
 	for _, test := range tests {
 		out := test.packet.Generate(test.max_size)
