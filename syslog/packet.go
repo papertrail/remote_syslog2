@@ -68,7 +68,6 @@ func (p Packet) Priority() Priority {
 
 func (p Packet) WriteTo(w io.Writer) (n int64, err error) {
 	// todo: max size?
-	// todo: https://tools.ietf.org/html/rfc5424#section-6.2.3 - "leap seconds MUST not be used"
 	ts := p.Time.Format(time.RFC3339Nano)
 	// todo: unicode checks / byte order mark
 	i, err := fmt.Fprintf(w, "<%d>1 %s %s %s - - - %s\n", p.Priority(), ts, p.Hostname, p.Tag, p.Message)
