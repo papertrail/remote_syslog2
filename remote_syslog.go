@@ -64,6 +64,18 @@ type ConfigManager struct {
 	CertBundle certs.CertBundle
 }
 
+func NewConfigManager() ConfigManager {
+	cm := ConfigManager{}
+	err := cm.Initialize()
+
+	if err != nil {
+		fmt.Printf("Failed to configure the application: %s", err)
+		os.Exit(1)
+	}
+
+	return cm
+}
+
 func (cm *ConfigManager) Initialize() error {
 	cm.parseFlags()
 
@@ -103,12 +115,12 @@ func (cm *ConfigManager) readConfig() error {
 func (cm *ConfigManager) loadConfigFile() error {
 	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Could not read the config file: %s", err))
+		return fmt.Errorf("Could not read the config file: %s", err)
 	}
 
 	err = json.Unmarshal(file, &cm.Config)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Could not parse the config file: %s", err))
+		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
 	return nil
 }
@@ -144,10 +156,14 @@ func (cm *ConfigManager) loadCABundle() error {
 }
 
 func (cm *ConfigManager) Hostname() string {
-	if cm.Flags.Hostname != "" {
+	switch {
+	case cm.Flags.Hostname != "":
 		return cm.Flags.Hostname
-	} else {
+	case cm.Config.Hostname != "":
 		return cm.Config.Hostname
+	default:
+		hostname, _ := os.Hostname()
+		return hostname
 	}
 }
 
@@ -168,17 +184,10 @@ func (cm *ConfigManager) Files() []string {
 }
 
 func main() {
-	cm := ConfigManager{}
-	err := cm.Initialize()
-	if err != nil {
-		fmt.Errorf("Initialization failes %s", err)
-	}
-	hostname := cm.Hostname()
-	if hostname == "" {
-		hostname, _ = os.Hostname()
-	}
+	cm := NewConfigManager()
 
-	fmt.Printf("%d", cm.DestPort())
+	hostname := cm.Hostname()
+
 	destination := fmt.Sprintf("%s:%d", cm.DestHost(), cm.DestPort())
 
 	log.Printf("Connecting to %s over %s", destination, cm.DestProtocol())
