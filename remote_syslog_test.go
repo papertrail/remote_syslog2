@@ -7,7 +7,7 @@ import (
 func TestGetHostnameFromConfig(t *testing.T) {
 
 	cm := ConfigManager{}
-	cm.Flags.ConfigFile = "test/config_with_host.json"
+	cm.Flags.ConfigFile = "test/config_with_host.yaml"
 	cm.loadConfigFile()
 
 	expectedHostname := "test-host-from-config"
@@ -18,7 +18,7 @@ func TestGetHostnameFromConfig(t *testing.T) {
 
 func TestGetHostnameFromCommandline(t *testing.T) {
 	cm := ConfigManager{}
-	cm.Flags.ConfigFile = "test/config_with_host.json"
+	cm.Flags.ConfigFile = "test/config_with_host.yaml"
 	cm.loadConfigFile()
 
 	cm.Flags.Hostname = "test-host-from-commandline"
