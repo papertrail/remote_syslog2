@@ -49,3 +49,7 @@ To run tests:
 To create a compiled executable:
 
     godep go build -o remote_syslog2 .
+
+To build a tarball for release:
+
+   ./build.sh
