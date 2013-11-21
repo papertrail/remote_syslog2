@@ -204,7 +204,7 @@ func main() {
 
 	if err != nil {
 		log.Criticalf("Cannot connect to server: %v", err)
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	for _, file := range cm.Files() {
