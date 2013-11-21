@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ActiveState/tail"
+	"github.com/howbazaar/loggo"
 	"github.com/sevenscale/remote_syslog2/papertrail"
 	"github.com/sevenscale/remote_syslog2/syslog"
 	"github.com/sevenscale/remote_syslog2/syslog/certs"
-	"github.com/shxsun/klog"
 	"io/ioutil"
 	"launchpad.net/goyaml"
 	"os"
@@ -16,19 +16,14 @@ import (
 	"time"
 )
 
-var log *klog.Logger
-
-func init() {
-	log = klog.NewLogger(nil, "")
-	log.SetLevel(klog.LDebug)
-}
+var log = loggo.GetLogger("")
 
 func tailFile(file string, logger *syslog.Conn) error {
 	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: false, Location: &tail.SeekInfo{0, os.SEEK_END}}
 	t, err := tail.TailFile(file, tailConfig)
 
 	if err != nil {
-		log.Error(err)
+		log.Errorf("%s", err)
 		return err
 	}
 
@@ -67,7 +62,7 @@ type ConfigManager struct {
 	Flags  struct {
 		Hostname   string
 		ConfigFile string
-		LogLevel   int
+		LogLevels  string
 	}
 	CertBundle certs.CertBundle
 }
@@ -77,7 +72,8 @@ func NewConfigManager() ConfigManager {
 	err := cm.Initialize()
 
 	if err != nil {
-		log.Fatalf("Failed to configure the application: %s", err)
+		log.Criticalf("Failed to configure the application: %s", err)
+		os.Exit(1)
 	}
 
 	return cm
@@ -106,7 +102,7 @@ func (cm *ConfigManager) Initialize() error {
 func (cm *ConfigManager) parseFlags() {
 	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
 	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
-	flag.IntVar(&cm.Flags.LogLevel, "loglevel", 4, "Log Level 0=Debug .. 4=Fatal")
+	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	flag.Parse()
 }
 
@@ -114,7 +110,7 @@ func (cm *ConfigManager) readConfig() error {
 	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
 	err := cm.loadConfigFile()
 	if err != nil {
-		log.Error(err)
+		log.Errorf("%s", err)
 		return err
 	}
 	return nil
@@ -136,7 +132,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 func (cm *ConfigManager) loadCABundle() error {
 	bundle := certs.NewCertBundle()
 	if cm.Config.CABundle == "" {
-		log.Info("Loading default certificates")
+		log.Infof("Loading default certificates")
 
 		loaded, err := bundle.LoadDefaultBundle()
 		if loaded != "" {
@@ -188,31 +184,21 @@ func (cm *ConfigManager) DestProtocol() string {
 	return cm.Config.Destination.Protocol
 }
 
-func (cm *ConfigManager) LogLevel() klog.Level {
-	switch cm.Flags.LogLevel {
-	case 0:
-		return klog.LDebug
-	case 1:
-		return klog.LInfo
-	case 2:
-		return klog.LWarning
-	case 3:
-		return klog.LError
-	case 4:
-		return klog.LFatal
-	default:
-		log.Errorf("Invalid logger level %d, assuming 1=Info", cm.Flags.LogLevel)
-		return klog.LInfo
-	}
+func (cm *ConfigManager) LogLevel() string {
+	return cm.Flags.LogLevels
 }
 
 func (cm *ConfigManager) Files() []string {
 	return cm.Config.Files
 }
 
+func (cm *ConfigManager) LogLevels() string {
+	return cm.Flags.LogLevels
+}
+
 func main() {
 	cm := NewConfigManager()
-	log.SetLevel(cm.LogLevel())
+	loggo.ConfigureLoggers(cm.LogLevels())
 	hostname := cm.Hostname()
 
 	destination := fmt.Sprintf("%s:%d", cm.DestHost(), cm.DestPort())
@@ -221,7 +207,8 @@ func main() {
 	logger, err := syslog.Dial(cm.DestProtocol(), destination, hostname, &cm.CertBundle)
 
 	if err != nil {
-		log.Fatalf("Cannot connect to server: %v", err)
+		log.Criticalf("Cannot connect to server: %v", err)
+		os.Exit(0)
 	}
 
 	for _, file := range cm.Files() {
