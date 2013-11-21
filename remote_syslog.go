@@ -184,10 +184,6 @@ func (cm *ConfigManager) DestProtocol() string {
 	return cm.Config.Destination.Protocol
 }
 
-func (cm *ConfigManager) LogLevel() string {
-	return cm.Flags.LogLevels
-}
-
 func (cm *ConfigManager) Files() []string {
 	return cm.Config.Files
 }

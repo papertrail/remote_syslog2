@@ -3,9 +3,12 @@ package syslog
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/howbazaar/loggo"
 	"github.com/sevenscale/remote_syslog2/syslog/certs"
 	"net"
 )
+
+var log = loggo.GetLogger("syslog")
 
 type Conn struct {
 	hostname string
