@@ -5,23 +5,25 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ActiveState/tail"
+	"github.com/howbazaar/loggo"
 	"github.com/sevenscale/remote_syslog2/papertrail"
 	"github.com/sevenscale/remote_syslog2/syslog"
 	"github.com/sevenscale/remote_syslog2/syslog/certs"
 	"io/ioutil"
 	"launchpad.net/goyaml"
-	"log"
 	"os"
 	"path"
 	"time"
 )
+
+var log = loggo.GetLogger("")
 
 func tailFile(file string, logger *syslog.Conn) error {
 	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: false, Location: &tail.SeekInfo{0, os.SEEK_END}}
 	t, err := tail.TailFile(file, tailConfig)
 
 	if err != nil {
-		log.Println(err)
+		log.Errorf("%s", err)
 		return err
 	}
 
@@ -60,6 +62,7 @@ type ConfigManager struct {
 	Flags  struct {
 		Hostname   string
 		ConfigFile string
+		LogLevels  string
 	}
 	CertBundle certs.CertBundle
 }
@@ -69,7 +72,7 @@ func NewConfigManager() ConfigManager {
 	err := cm.Initialize()
 
 	if err != nil {
-		fmt.Printf("Failed to configure the application: %s", err)
+		log.Criticalf("Failed to configure the application: %s", err)
 		os.Exit(1)
 	}
 
@@ -99,14 +102,15 @@ func (cm *ConfigManager) Initialize() error {
 func (cm *ConfigManager) parseFlags() {
 	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
 	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
+	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	flag.Parse()
 }
 
 func (cm *ConfigManager) readConfig() error {
-	log.Printf("Reading configuration file %s", cm.Flags.ConfigFile)
+	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
 	err := cm.loadConfigFile()
 	if err != nil {
-		log.Println(err)
+		log.Errorf("%s", err)
 		return err
 	}
 	return nil
@@ -128,23 +132,24 @@ func (cm *ConfigManager) loadConfigFile() error {
 func (cm *ConfigManager) loadCABundle() error {
 	bundle := certs.NewCertBundle()
 	if cm.Config.CABundle == "" {
-		log.Printf("Loading default certificates")
+		log.Infof("Loading default certificates")
 
 		loaded, err := bundle.LoadDefaultBundle()
 		if loaded != "" {
-			log.Printf("Loaded certificates from %s", loaded)
+			log.Infof("Loaded certificates from %s", loaded)
 		}
 		if err != nil {
 			return err
 		}
 
+		log.Infof("Loading papertrail certificates")
 		err = bundle.ImportBytes(papertrail.BundleCert())
 		if err != nil {
 			return err
 		}
 
 	} else {
-		log.Printf("Loading certificates from %s", cm.Config.CABundle)
+		log.Infof("Loading certificates from %s", cm.Config.CABundle)
 		err := bundle.ImportFromFile(cm.Config.CABundle)
 		if err != nil {
 			return err
@@ -183,22 +188,27 @@ func (cm *ConfigManager) Files() []string {
 	return cm.Config.Files
 }
 
+func (cm *ConfigManager) LogLevels() string {
+	return cm.Flags.LogLevels
+}
+
 func main() {
 	cm := NewConfigManager()
-
+	loggo.ConfigureLoggers(cm.LogLevels())
 	hostname := cm.Hostname()
 
 	destination := fmt.Sprintf("%s:%d", cm.DestHost(), cm.DestPort())
 
-	log.Printf("Connecting to %s over %s", destination, cm.DestProtocol())
+	log.Infof("Connecting to %s over %s", destination, cm.DestProtocol())
 	logger, err := syslog.Dial(cm.DestProtocol(), destination, hostname, &cm.CertBundle)
 
 	if err != nil {
-		log.Fatalf("Cannot connect to server: %v", err)
+		log.Criticalf("Cannot connect to server: %v", err)
+		os.Exit(1)
 	}
 
 	for _, file := range cm.Files() {
-		log.Printf("Forwarding %s", file)
+		log.Infof("Forwarding %s", file)
 		go tailFile(file, logger)
 	}
 

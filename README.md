@@ -53,3 +53,24 @@ To create a compiled executable:
 To build a tarball for release:
 
    ./build.sh
+
+# Logging Configuration
+Levels: TRACE,DEBUG,INFO,WARNING,ERROR
+Modules <root>, syslog
+
+remote_syslog uses a hierarchical logger that allow you to control the logging level of various packages. The default configuration is <code>\<root\>=INFO</root></code>
+
+## Examples
+
+- Increase the verbosity of all packages
+
+```
+remote_syslog -log "<root>=DEBUG"
+```
+
+
+- Set the root logger to debug and the syslog package to trace
+
+```
+remote_syslog -log "<root>=DEBUG;syslog=TRACE"
+```
