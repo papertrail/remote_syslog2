@@ -1,25 +1,30 @@
 {
 	"ImportPath": "github.com/sevenscale/remote_syslog2",
-	"GoVersion": "go1.1.1",
+	"GoVersion": "go1.1.2",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
-			"Rev": "7cb0dcdbe146d552e7982916e6b723ef145e339e"
+			"Rev": "c5b73d348500e127fc50788ee93ef5a6f740cc96"
 		},
 		{
 			"ImportPath": "github.com/howeyc/fsnotify",
-			"Rev": "206f31729d554d8561334c0bc44202a716511175"
+			"Rev": "7f0625dbb54fef2cfba674bc0dfc6c37d34bad27"
 		},
 		{
 			"ImportPath": "github.com/onsi/ginkgo",
-			"Rev": "5a38252755c298129262a2c9f67564183c98e396"
+			"Rev": "8c1fdb7320c261add3dd49219c031ae37a077ac4"
 		},
 		{
 			"ImportPath": "github.com/onsi/gomega",
 			"Rev": "1a1f88a0799ac4009af5262e3add6a8486a8270f"
+		},
+		{
+			"ImportPath": "launchpad.net/goyaml",
+			"Comment": "50",
+			"Rev": "gustavo@niemeyer.net-20131114120802-abe042syx64z2m7s"
 		},
 		{
 			"ImportPath": "launchpad.net/tomb",

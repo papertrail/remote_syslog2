@@ -24,6 +24,11 @@ type Line struct {
 	Err  error // Error from tail
 }
 
+// NewLine returns a Line with present time.
+func NewLine(text string) *Line {
+	return &Line{text, time.Now(), nil}
+}
+
 // SeekInfo represents arguments to `os.Seek`
 type SeekInfo struct {
 	Offset int64
@@ -304,4 +309,11 @@ func (tail *Tail) sendLine(line []byte) bool {
 	}
 
 	return true
+}
+
+// Cleanup removes inotify watches added by the tail package. This function is
+// meant to be invoked from a process's exit handler. Linux kernel will not
+// automatically remove inotify watches after the process exits.
+func Cleanup() {
+	watch.Cleanup()
 }
