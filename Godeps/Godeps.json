@@ -10,6 +10,10 @@
 			"Rev": "c5b73d348500e127fc50788ee93ef5a6f740cc96"
 		},
 		{
+			"ImportPath": "github.com/howbazaar/loggo",
+			"Rev": "384be41088235af6d26ba66786fd23c45b2d5311"
+		},
+		{
 			"ImportPath": "github.com/howeyc/fsnotify",
 			"Rev": "7f0625dbb54fef2cfba674bc0dfc6c37d34bad27"
 		},
