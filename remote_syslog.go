@@ -82,12 +82,7 @@ func NewConfigManager() ConfigManager {
 func (cm *ConfigManager) Initialize() error {
 	cm.parseFlags()
 
-	err := cm.readConfig()
-	if err != nil {
-		return err
-	}
-
-	err = cm.loadConfigFile()
+	err := cm.loadConfigFile()
 	if err != nil {
 		return err
 	}
@@ -106,17 +101,9 @@ func (cm *ConfigManager) parseFlags() {
 	flag.Parse()
 }
 
-func (cm *ConfigManager) readConfig() error {
-	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
-	err := cm.loadConfigFile()
-	if err != nil {
-		log.Errorf("%s", err)
-		return err
-	}
-	return nil
-}
-
 func (cm *ConfigManager) loadConfigFile() error {
+	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
+
 	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
