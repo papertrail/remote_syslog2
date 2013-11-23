@@ -68,6 +68,7 @@ func (p Packet) Priority() Priority {
 
 func (p Packet) CleanMessage() string {
 	s := strings.Replace(p.Message, "\n", " ", -1)
+	s = strings.Replace(s, "\r", " ", -1)
 	return strings.Replace(s, "\x00", " ", -1)
 }
 
