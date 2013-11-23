@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/ActiveState/tail"
@@ -18,13 +17,13 @@ import (
 
 var log = loggo.GetLogger("")
 
-func tailFile(file string, logger *syslog.Conn) error {
+func tailFile(file string, logger *syslog.Conn) {
 	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: false, Location: &tail.SeekInfo{0, os.SEEK_END}}
 	t, err := tail.TailFile(file, tailConfig)
 
 	if err != nil {
 		log.Errorf("%s", err)
-		return err
+		return
 	}
 
 	for line := range t.Lines {
@@ -38,12 +37,12 @@ func tailFile(file string, logger *syslog.Conn) error {
 		}
 		err = logger.WritePacket(p)
 		if err != nil {
-			return err
+			log.Errorf("%s", err)
 		}
 
 	}
 
-	return errors.New("Tail worker executed abnormally")
+	log.Errorf("Tail worker executed abnormally")
 }
 
 type ConfigFile struct {
