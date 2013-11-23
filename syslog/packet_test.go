@@ -96,10 +96,10 @@ func TestPacketGenerate(t *testing.T) {
 				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
 				Hostname: "192.0.2.1",
 				Tag:      "myproc",
-				Message:  "newline:'\n'. nullbyte:'\x00'.",
+				Message:  "newline:'\n'. nullbyte:'\x00'. carriage return:'\r'.",
 			},
 			0,
-			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - newline:' '. nullbyte:' '.",
+			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - newline:' '. nullbyte:' '. carriage return:' '.",
 		},
 	}
 	for _, test := range tests {
