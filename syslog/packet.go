@@ -77,6 +77,10 @@ func (p Packet) Generate(max_size int) string {
 		return fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.CleanMessage())
 	} else {
 		msg := fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.CleanMessage())
-		return msg[0:max_size]
+		if len(msg) > max_size {
+			return msg[0:max_size]
+		} else {
+			return msg
+		}
 	}
 }
