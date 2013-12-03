@@ -32,9 +32,37 @@ test:
 
 depend:
 	@echo
-	@echo "\033[Checking Dependencies ----> \033[m"
-	chmod +x ./build_deps.sh
-	./build_deps.sh
+	@echo "\033[32mChecking Dependencies ----> \033[m"
+
+ifndef GOPATH
+	@echo "\033[1;33mGOPATH is not set. This means that you do not have go setup properly on this machine\033[m"
+	@echo "$$ mkdir ~/gocode";
+	@echo "$$ echo 'export GOPATH=~/gocode' >> ~/.bash_profile";
+	@echo "$$ echo 'export PATH=\"\$$GOPATH/bin:\$$PATH\"' >> ~/.bash_profile";
+	@echo "$$ source ~/.bash_profile";
+	exit 1;
+endif
+
+	type go >/dev/null 2>&1|| { \
+	  echo "\033[1;33mGo is required to build this application\033[m"; \
+	  echo "\033[1;33mIf you are using homebrew on OSX, run\033[m"; \
+	  echo "$$ brew install go --cross-compile-all"; \
+	  exit 1; \
+	}
+
+	type godep >/dev/null 2>&1|| { \
+	  echo "\033[1;33mGodep is not installed. See https://github.com/kr/godep\033[m"; \
+	  echo "$$ go get github.com/kr/godep"; \
+	  exit 1; \
+	}
+
+	type gox >/dev/null 2>&1 || { \
+	  echo "\033[1;33mGox is not installed. See https://github.com/mitchellh/gox\033[m"; \
+	  echo "$$ go get github.com/mitchellh/gox"; \
+	  exit 1; \
+	}
+
+
 
 $(BUILD_PAIRS): build
 	@echo
