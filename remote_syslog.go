@@ -7,13 +7,18 @@ import (
 	"github.com/sevenscale/remote_syslog2/syslog"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 )
 
 var log = loggo.GetLogger("")
 
-func tailFile(file string, logger *syslog.Conn) {
-	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: false, Location: &tail.SeekInfo{0, os.SEEK_END}}
+// Tails a single file
+func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
+	defer wr.Remove(file)
+	wr.Add(file)
+	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Location: &tail.SeekInfo{0, os.SEEK_END}}
+
 	t, err := tail.TailFile(file, tailConfig)
 
 	if err != nil {
@@ -40,6 +45,46 @@ func tailFile(file string, logger *syslog.Conn) {
 	log.Errorf("Tail worker executed abnormally")
 }
 
+// Tails files speficied in the globs and re-evaluates the globs
+// at the specified interval
+func tailFiles(globs []string, interval RefreshInterval, logger *syslog.Conn) {
+	wr := NewWorkerRegistry()
+	globFiles(globs, logger, &wr)
+
+	//The use of a ticket could spell trouble if the operation takes longer
+	//than 10 seconds
+	log.Debugf("Evaluating globs every %s", interval.Duration)
+	ticker := time.NewTicker(interval.Duration)
+	for {
+		<-ticker.C
+		globFiles(globs, logger, &wr)
+	}
+}
+
+//
+func globFiles(globs []string, logger *syslog.Conn, wr *WorkerRegistry) {
+	log.Debugf("Evaluating file globs")
+	for _, glob := range globs {
+
+		files, err := filepath.Glob(glob)
+
+		if err != nil {
+			log.Errorf("Failed to glob %s: %s", glob, err)
+		} else if files == nil {
+			log.Errorf("Cannot forward %s, it may not exist", glob)
+		}
+
+		for _, file := range files {
+			if wr.Exists(file) {
+				log.Debugf("Skipping %s", file)
+			} else {
+				log.Infof("Forwarding %s", file)
+				go tailOne(file, logger, wr)
+			}
+		}
+	}
+}
+
 func main() {
 	cm := NewConfigManager()
 	loggo.ConfigureLoggers(cm.LogLevels())
@@ -55,10 +100,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, file := range cm.Files() {
-		log.Infof("Forwarding %s", file)
-		go tailFile(file, logger)
-	}
+	go tailFiles(cm.Files(), cm.RefreshInterval(), logger)
 
 	ch := make(chan bool)
 	<-ch

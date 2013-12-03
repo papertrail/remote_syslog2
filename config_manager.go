@@ -24,14 +24,17 @@ type ConfigFile struct {
 	}
 	Hostname string
 	CABundle string `yaml:"ca_bundle"`
+	//SetYAML is only called on pointers
+	RefreshInterval *RefreshInterval `yaml:"refresh"`
 }
 
 type ConfigManager struct {
 	Config ConfigFile
 	Flags  struct {
-		Hostname   string
-		ConfigFile string
-		LogLevels  string
+		Hostname        string
+		ConfigFile      string
+		LogLevels       string
+		RefreshInterval RefreshInterval
 	}
 	CertBundle certs.CertBundle
 }
@@ -97,6 +100,7 @@ func (cm *ConfigManager) parseFlags() {
 	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
 	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
 	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	flag.Var(&cm.Flags.RefreshInterval, "refresh", "How often to check for new files")
 	flag.Parse()
 }
 
@@ -184,4 +188,16 @@ func (cm *ConfigManager) Files() []string {
 
 func (cm *ConfigManager) LogLevels() string {
 	return cm.Flags.LogLevels
+}
+
+func (cm *ConfigManager) RefreshInterval() RefreshInterval {
+	switch {
+	case cm.Config.RefreshInterval != nil && cm.Flags.RefreshInterval.Duration != 0:
+		return cm.Flags.RefreshInterval
+	case cm.Config.RefreshInterval != nil:
+		return *cm.Config.RefreshInterval
+	case cm.Flags.RefreshInterval.Duration != 0:
+		return cm.Flags.RefreshInterval
+	}
+	return RefreshInterval{Duration: MinimumRefreshInterval}
 }
