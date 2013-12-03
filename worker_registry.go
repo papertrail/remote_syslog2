@@ -24,8 +24,8 @@ func (w *WorkerRegistry) Exists(worker string) bool {
 }
 
 func (w *WorkerRegistry) Find(worker string) (*list.Element, error) {
-	defer w.mu.RUnlock()
 	w.mu.RLock()
+	defer w.mu.RUnlock()
 	log.Tracef("Called thread safe Find")
 	log.Tracef("Looking for %s in the worker registry", worker)
 	element, err := w.find(worker)
@@ -49,15 +49,15 @@ func (w *WorkerRegistry) find(worker string) (*list.Element, error) {
 }
 
 func (w *WorkerRegistry) Add(worker string) {
-	defer w.mu.Unlock()
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	log.Tracef("Adding %s to worker registry", worker)
 	w.workers.PushBack(worker)
 }
 
 func (w *WorkerRegistry) Remove(worker string) error {
-	defer w.mu.Unlock()
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	log.Tracef("Removing %s from worker registry", worker)
 	workerElement, err := w.find(worker)
 	if err != nil {
