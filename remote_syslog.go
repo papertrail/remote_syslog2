@@ -49,15 +49,10 @@ func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
 // at the specified interval
 func tailFiles(globs []string, interval RefreshInterval, logger *syslog.Conn) {
 	wr := NewWorkerRegistry()
-	globFiles(globs, logger, &wr)
-
-	//The use of a ticket could spell trouble if the operation takes longer
-	//than 10 seconds
 	log.Debugf("Evaluating globs every %s", interval.Duration)
-	ticker := time.NewTicker(interval.Duration)
 	for {
-		<-ticker.C
 		globFiles(globs, logger, &wr)
+		time.Sleep(interval.Duration)
 	}
 }
 
