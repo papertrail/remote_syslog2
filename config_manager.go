@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"launchpad.net/goyaml"
 	"os"
+	"regexp"
 	"time"
 )
 
@@ -26,6 +27,7 @@ type ConfigFile struct {
 	CABundle string `yaml:"ca_bundle"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"refresh"`
+	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
 }
 
 type ConfigManager struct {
@@ -69,6 +71,41 @@ func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
 	return true
 }
 
+type RegexCollection []*regexp.Regexp
+
+func (r *RegexCollection) Set(value string) error {
+	exp, err := regexp.Compile(value)
+	if err != nil {
+		return err
+	}
+	*r = append(*r, exp)
+	return nil
+}
+
+func (r *RegexCollection) String() string {
+	return fmt.Sprint(*r)
+}
+
+func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
+	items, ok := value.([]interface{})
+
+	if !ok {
+		return false
+	}
+
+	for _, item := range items {
+		s, ok := item.(string)
+
+		if !ok {
+			return false
+		}
+
+		r.Set(s)
+	}
+
+	return true
+}
+
 func NewConfigManager() ConfigManager {
 	cm := ConfigManager{}
 	err := cm.Initialize()
@@ -82,6 +119,7 @@ func NewConfigManager() ConfigManager {
 }
 
 func (cm *ConfigManager) Initialize() error {
+	cm.Config.ExcludeFiles = &RegexCollection{}
 	cm.parseFlags()
 
 	err := cm.readConfig()
@@ -93,6 +131,7 @@ func (cm *ConfigManager) Initialize() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -200,4 +239,8 @@ func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 		return cm.Flags.RefreshInterval
 	}
 	return RefreshInterval{Duration: MinimumRefreshInterval}
+}
+
+func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
+	return *cm.Config.ExcludeFiles
 }

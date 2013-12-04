@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"time"
 )
 
@@ -47,19 +48,19 @@ func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
 
 // Tails files speficied in the globs and re-evaluates the globs
 // at the specified interval
-func tailFiles(globs []string, interval RefreshInterval, logger *syslog.Conn) {
+func tailFiles(globs []string, excludedFiles []*regexp.Regexp, interval RefreshInterval, logger *syslog.Conn) {
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", interval.Duration)
 	logMissingFiles := true
 	for {
-		globFiles(globs, logger, &wr, logMissingFiles)
+		globFiles(globs, excludedFiles, logger, &wr, logMissingFiles)
 		time.Sleep(interval.Duration)
 		logMissingFiles = false
 	}
 }
 
 //
-func globFiles(globs []string, logger *syslog.Conn, wr *WorkerRegistry, logMissingFiles bool) {
+func globFiles(globs []string, excludedFiles []*regexp.Regexp, logger *syslog.Conn, wr *WorkerRegistry, logMissingFiles bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range globs {
 
@@ -72,14 +73,28 @@ func globFiles(globs []string, logger *syslog.Conn, wr *WorkerRegistry, logMissi
 		}
 
 		for _, file := range files {
-			if wr.Exists(file) {
-				log.Debugf("Skipping %s", file)
-			} else {
+			switch {
+			case wr.Exists(file):
+				log.Debugf("Skipping %s because it is already running", file)
+			case matchExps(file, excludedFiles):
+				log.Debugf("Skipping %s because it is excluded by regular expression", file)
+			default:
 				log.Infof("Forwarding %s", file)
 				go tailOne(file, logger, wr)
 			}
 		}
 	}
+}
+
+// Evaluates each regex against the string. If any one is a match
+// the function returns true, otherwise it returns false
+func matchExps(value string, expressions []*regexp.Regexp) bool {
+	for _, exp := range expressions {
+		if exp.MatchString(value) {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -96,8 +111,7 @@ func main() {
 		log.Criticalf("Cannot connect to server: %v", err)
 		os.Exit(1)
 	}
-
-	go tailFiles(cm.Files(), cm.RefreshInterval(), logger)
+	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.RefreshInterval(), logger)
 
 	ch := make(chan bool)
 	<-ch
