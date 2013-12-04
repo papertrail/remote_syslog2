@@ -50,14 +50,16 @@ func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
 func tailFiles(globs []string, interval RefreshInterval, logger *syslog.Conn) {
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", interval.Duration)
+	logMissingFiles := true
 	for {
-		globFiles(globs, logger, &wr)
+		globFiles(globs, logger, &wr, logMissingFiles)
 		time.Sleep(interval.Duration)
+		logMissingFiles = false
 	}
 }
 
 //
-func globFiles(globs []string, logger *syslog.Conn, wr *WorkerRegistry) {
+func globFiles(globs []string, logger *syslog.Conn, wr *WorkerRegistry, logMissingFiles bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range globs {
 
@@ -65,7 +67,7 @@ func globFiles(globs []string, logger *syslog.Conn, wr *WorkerRegistry) {
 
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob, err)
-		} else if files == nil {
+		} else if files == nil && logMissingFiles {
 			log.Errorf("Cannot forward %s, it may not exist", glob)
 		}
 
