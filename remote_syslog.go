@@ -1,24 +1,25 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/ActiveState/tail"
 	"github.com/howbazaar/loggo"
-	"github.com/sevenscale/remote_syslog2/papertrail"
 	"github.com/sevenscale/remote_syslog2/syslog"
-	"github.com/sevenscale/remote_syslog2/syslog/certs"
-	"io/ioutil"
-	"launchpad.net/goyaml"
 	"os"
 	"path"
+	"path/filepath"
+	"regexp"
 	"time"
 )
 
 var log = loggo.GetLogger("")
 
-func tailFile(file string, logger *syslog.Conn) {
-	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: false, Location: &tail.SeekInfo{0, os.SEEK_END}}
+// Tails a single file
+func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
+	defer wr.Remove(file)
+	wr.Add(file)
+	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Location: &tail.SeekInfo{0, os.SEEK_END}}
+
 	t, err := tail.TailFile(file, tailConfig)
 
 	if err != nil {
@@ -45,137 +46,55 @@ func tailFile(file string, logger *syslog.Conn) {
 	log.Errorf("Tail worker executed abnormally")
 }
 
-type ConfigFile struct {
-	Files       []string
-	Destination struct {
-		Host     string
-		Port     int
-		Protocol string
+// Tails files speficied in the globs and re-evaluates the globs
+// at the specified interval
+func tailFiles(globs []string, excludedFiles []*regexp.Regexp, interval RefreshInterval, logger *syslog.Conn) {
+	wr := NewWorkerRegistry()
+	log.Debugf("Evaluating globs every %s", interval.Duration)
+	logMissingFiles := true
+	for {
+		globFiles(globs, excludedFiles, logger, &wr, logMissingFiles)
+		time.Sleep(interval.Duration)
+		logMissingFiles = false
 	}
-	Hostname string
-	CABundle string `yaml:"ca_bundle"`
 }
 
-type ConfigManager struct {
-	Config ConfigFile
-	Flags  struct {
-		Hostname   string
-		ConfigFile string
-		LogLevels  string
-	}
-	CertBundle certs.CertBundle
-}
+//
+func globFiles(globs []string, excludedFiles []*regexp.Regexp, logger *syslog.Conn, wr *WorkerRegistry, logMissingFiles bool) {
+	log.Debugf("Evaluating file globs")
+	for _, glob := range globs {
 
-func NewConfigManager() ConfigManager {
-	cm := ConfigManager{}
-	err := cm.Initialize()
+		files, err := filepath.Glob(glob)
 
-	if err != nil {
-		log.Criticalf("Failed to configure the application: %s", err)
-		os.Exit(1)
-	}
-
-	return cm
-}
-
-func (cm *ConfigManager) Initialize() error {
-	cm.parseFlags()
-
-	err := cm.loadConfigFile()
-	if err != nil {
-		return err
-	}
-
-	err = cm.loadCABundle()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (cm *ConfigManager) parseFlags() {
-	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
-	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
-	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
-	flag.Parse()
-}
-
-func (cm *ConfigManager) loadConfigFile() error {
-	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
-
-	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
-	if err != nil {
-		return fmt.Errorf("Could not read the config file: %s", err)
-	}
-
-	err = goyaml.Unmarshal(file, &cm.Config)
-	if err != nil {
-		return fmt.Errorf("Could not parse the config file: %s", err)
-	}
-	return nil
-}
-
-func (cm *ConfigManager) loadCABundle() error {
-	bundle := certs.NewCertBundle()
-	if cm.Config.CABundle == "" {
-		log.Infof("Loading default certificates")
-
-		loaded, err := bundle.LoadDefaultBundle()
-		if loaded != "" {
-			log.Infof("Loaded certificates from %s", loaded)
-		}
 		if err != nil {
-			return err
+			log.Errorf("Failed to glob %s: %s", glob, err)
+		} else if files == nil && logMissingFiles {
+			log.Errorf("Cannot forward %s, it may not exist", glob)
 		}
 
-		log.Infof("Loading papertrail certificates")
-		err = bundle.ImportBytes(papertrail.BundleCert())
-		if err != nil {
-			return err
+		for _, file := range files {
+			switch {
+			case wr.Exists(file):
+				log.Debugf("Skipping %s because it is already running", file)
+			case matchExps(file, excludedFiles):
+				log.Debugf("Skipping %s because it is excluded by regular expression", file)
+			default:
+				log.Infof("Forwarding %s", file)
+				go tailOne(file, logger, wr)
+			}
 		}
-
-	} else {
-		log.Infof("Loading certificates from %s", cm.Config.CABundle)
-		err := bundle.ImportFromFile(cm.Config.CABundle)
-		if err != nil {
-			return err
-		}
-
-	}
-	cm.CertBundle = bundle
-	return nil
-}
-
-func (cm *ConfigManager) Hostname() string {
-	switch {
-	case cm.Flags.Hostname != "":
-		return cm.Flags.Hostname
-	case cm.Config.Hostname != "":
-		return cm.Config.Hostname
-	default:
-		hostname, _ := os.Hostname()
-		return hostname
 	}
 }
 
-func (cm *ConfigManager) DestHost() string {
-	return cm.Config.Destination.Host
-}
-
-func (cm ConfigManager) DestPort() int {
-	return cm.Config.Destination.Port
-}
-
-func (cm *ConfigManager) DestProtocol() string {
-	return cm.Config.Destination.Protocol
-}
-
-func (cm *ConfigManager) Files() []string {
-	return cm.Config.Files
-}
-
-func (cm *ConfigManager) LogLevels() string {
-	return cm.Flags.LogLevels
+// Evaluates each regex against the string. If any one is a match
+// the function returns true, otherwise it returns false
+func matchExps(value string, expressions []*regexp.Regexp) bool {
+	for _, exp := range expressions {
+		if exp.MatchString(value) {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -192,11 +111,7 @@ func main() {
 		log.Criticalf("Cannot connect to server: %v", err)
 		os.Exit(1)
 	}
-
-	for _, file := range cm.Files() {
-		log.Infof("Forwarding %s", file)
-		go tailFile(file, logger)
-	}
+	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.RefreshInterval(), logger)
 
 	ch := make(chan bool)
 	<-ch
