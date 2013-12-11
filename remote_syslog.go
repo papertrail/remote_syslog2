@@ -1,21 +1,22 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ActiveState/tail"
 	"github.com/howbazaar/loggo"
 	"github.com/sevenscale/remote_syslog2/syslog"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"time"
 )
 
 var log = loggo.GetLogger("")
 
 // Tails a single file
-func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
+func tailOne(file string, logger *syslog.Logger, wr *WorkerRegistry) {
 	defer wr.Remove(file)
 	wr.Add(file)
 	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Location: &tail.SeekInfo{0, os.SEEK_END}}
@@ -28,19 +29,14 @@ func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
 	}
 
 	for line := range t.Lines {
-		p := syslog.Packet{
+		logger.Packets <- syslog.Packet{
 			Severity: syslog.SevInfo,
 			Facility: syslog.LogLocal1, // todo: customize this
 			Time:     time.Now(),
-			Hostname: logger.Hostname(),
+			Hostname: logger.ClientHostname,
 			Tag:      path.Base(file),
 			Message:  line.Text,
 		}
-		err = logger.WritePacket(p)
-		if err != nil {
-			log.Errorf("%s", err)
-		}
-
 	}
 
 	log.Errorf("Tail worker executed abnormally")
@@ -48,7 +44,7 @@ func tailOne(file string, logger *syslog.Conn, wr *WorkerRegistry) {
 
 // Tails files speficied in the globs and re-evaluates the globs
 // at the specified interval
-func tailFiles(globs []string, excludedFiles []*regexp.Regexp, interval RefreshInterval, logger *syslog.Conn) {
+func tailFiles(globs []string, excludedFiles []*regexp.Regexp, interval RefreshInterval, logger *syslog.Logger) {
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", interval.Duration)
 	logMissingFiles := true
@@ -60,7 +56,7 @@ func tailFiles(globs []string, excludedFiles []*regexp.Regexp, interval RefreshI
 }
 
 //
-func globFiles(globs []string, excludedFiles []*regexp.Regexp, logger *syslog.Conn, wr *WorkerRegistry, logMissingFiles bool) {
+func globFiles(globs []string, excludedFiles []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, logMissingFiles bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range globs {
 
@@ -100,17 +96,16 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 func main() {
 	cm := NewConfigManager()
 	loggo.ConfigureLoggers(cm.LogLevels())
-	hostname := cm.Hostname()
 
-	destination := fmt.Sprintf("%s:%d", cm.DestHost(), cm.DestPort())
-
-	log.Infof("Connecting to %s over %s", destination, cm.DestProtocol())
-	logger, err := syslog.Dial(cm.DestProtocol(), destination, hostname, &cm.CertBundle)
+	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
+	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
+	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, &cm.CertBundle)
 
 	if err != nil {
 		log.Criticalf("Cannot connect to server: %v", err)
 		os.Exit(1)
 	}
+
 	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.RefreshInterval(), logger)
 
 	ch := make(chan bool)
