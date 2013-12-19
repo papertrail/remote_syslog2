@@ -101,7 +101,10 @@ func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
 			return false
 		}
 
-		r.Set(s)
+		err := r.Set(s)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to compile regex expression \"%s\"", s))
+		}
 	}
 
 	return true
