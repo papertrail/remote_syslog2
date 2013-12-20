@@ -44,7 +44,10 @@ to manage dependencies. To get everything set up, install go then run:
 
 To run tests:
 
+    # run all tests
     godep go test ./...
+    # run all tests except the slower syslog reconnection tests
+    godep go test -short ./...
 
 To create a compiled executable:
 
