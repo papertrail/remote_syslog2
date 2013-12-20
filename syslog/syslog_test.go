@@ -3,7 +3,6 @@ package syslog
 import (
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"testing"
 	"time"
@@ -51,7 +50,7 @@ func (s *testServer) listenTCP() net.Listener {
 }
 
 func (s *testServer) serveTCP(ln net.Listener) {
-	for {
+	for i := 0; ; i++ {
 		select {
 		case <-s.Close:
 			ln.Close()
@@ -62,6 +61,11 @@ func (s *testServer) serveTCP(ln net.Listener) {
 				panicf("Accept error: %v", err)
 			}
 			go handle(conn, s.Messages)
+			if !testing.Short() && 0 == i%5 {
+				ln.Close()
+				time.Sleep(time.Second * 6)
+				ln = s.listenTCP()
+			}
 		}
 	}
 }
@@ -94,7 +98,8 @@ func (s *testServer) serveUDP(conn *net.UDPConn) {
 }
 
 func handle(conn io.ReadCloser, messages chan string) {
-	for {
+
+	for i := 0; ; i++ {
 		fmt.Println("handle")
 		buf := make([]byte, 1024)
 		n, err := conn.Read(buf)
@@ -104,8 +109,7 @@ func handle(conn io.ReadCloser, messages chan string) {
 			fmt.Println("handle", string(buf[0:n]))
 			messages <- string(buf[0:n])
 		}
-		// todo: make configurable
-		if 0 == (rand.Int() % 2) {
+		if i % 2 == 0 {
 			fmt.Println("closing")
 			conn.Close()
 			return
