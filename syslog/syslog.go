@@ -120,20 +120,27 @@ func Dial(clientHostname, network, raddr string, certBundle *certs.CertBundle) (
 
 // Write a packet, reconnecting if needed. It is not safe to call this
 // method concurrently.
-func (l *Logger) writePacket(p Packet) (err error) {
-	if l.conn.reconnectNeeded() {
-		l.conn = connect(l.network, l.raddr, l.certBundle)
-	}
+func (l *Logger) writePacket(p Packet) {
+	var err error
+	for {
+		if l.conn.reconnectNeeded() {
+			l.conn = connect(l.network, l.raddr, l.certBundle)
+		}
 
-	switch l.conn.netConn.(type) {
-	case *net.TCPConn, *tls.Conn:
-		_, err = io.WriteString(l.conn.netConn, p.Generate(0)+"\n")
-		return err
-	case *net.UDPConn:
-		_, err = io.WriteString(l.conn.netConn, p.Generate(1024))
-		return err
-	default:
-		panic(fmt.Errorf("Network protocol %s not supported", l.network))
+		switch l.conn.netConn.(type) {
+		case *net.TCPConn, *tls.Conn:
+			_, err = io.WriteString(l.conn.netConn, p.Generate(0)+"\n")
+		case *net.UDPConn:
+			_, err = io.WriteString(l.conn.netConn, p.Generate(1024))
+		default:
+			panic(fmt.Errorf("Network protocol %s not supported", l.network))
+		}
+		if err == nil {
+			return
+		} else {
+			// todo: log?
+			time.Sleep(1 * time.Second)
+		}
 	}
 }
 
