@@ -1,3 +1,9 @@
+/*
+The syslog package provides a syslog client.
+
+Unlike the core log/syslog package it uses the newer rfc5424 syslog protocol,
+reliably reconnects on failure, and supports TLS encrypted TCP connections.
+*/
 package syslog
 
 import (
