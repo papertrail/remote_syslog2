@@ -100,17 +100,14 @@ func (s *testServer) serveUDP(conn *net.UDPConn) {
 func handle(conn io.ReadCloser, messages chan string) {
 
 	for i := 0; ; i++ {
-		fmt.Println("handle")
 		buf := make([]byte, 1024)
 		n, err := conn.Read(buf)
 		if err != nil {
 			panicf("Read error")
 		} else {
-			fmt.Println("handle", string(buf[0:n]))
 			messages <- string(buf[0:n])
 		}
-		if i % 2 == 0 {
-			fmt.Println("closing")
+		if i%2 == 0 {
 			conn.Close()
 			return
 		}
