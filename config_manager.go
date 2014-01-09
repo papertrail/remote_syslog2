@@ -28,6 +28,7 @@ type ConfigFile struct {
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"refresh"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
+	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
 }
 
 type ConfigManager struct {
@@ -100,7 +101,10 @@ func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
 			return false
 		}
 
-		r.Set(s)
+		err := r.Set(s)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to compile regex expression \"%s\"", s))
+		}
 	}
 
 	return true
@@ -120,6 +124,7 @@ func NewConfigManager() ConfigManager {
 
 func (cm *ConfigManager) Initialize() error {
 	cm.Config.ExcludeFiles = &RegexCollection{}
+	cm.Config.ExcludePatterns = &RegexCollection{}
 	cm.parseFlags()
 
 	err := cm.readConfig()
@@ -243,4 +248,8 @@ func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 
 func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
 	return *cm.Config.ExcludeFiles
+}
+
+func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
+	return *cm.Config.ExcludePatterns
 }
