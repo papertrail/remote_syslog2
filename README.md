@@ -49,6 +49,18 @@ To run tests:
     # run all tests except the slower syslog reconnection tests
     godep go test -short ./...
 
+## Building (newer)
+
+If you don't have it, install `gox`:
+
+    go get github.com/mitchellh/gox
+
+Then:
+
+    make
+
+## Building (older)
+
 To create a compiled executable:
 
     godep go build -o remote_syslog2 .
