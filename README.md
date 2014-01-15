@@ -55,7 +55,7 @@ To create a compiled executable:
 
 To build a tarball for release:
 
-   ./build.sh
+    ./build.sh
 
 # Logging Configuration
 Levels: TRACE,DEBUG,INFO,WARNING,ERROR
