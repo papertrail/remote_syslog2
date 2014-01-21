@@ -37,7 +37,10 @@ type ConfigManager struct {
 		Hostname        string
 		ConfigFile      string
 		LogLevels       string
+		DebugLogFile    string
+		PidFile         string
 		RefreshInterval RefreshInterval
+		Daemonize       bool
 	}
 	CertBundle certs.CertBundle
 }
@@ -143,8 +146,11 @@ func (cm *ConfigManager) Initialize() error {
 func (cm *ConfigManager) parseFlags() {
 	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
 	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
+	flag.StringVar(&cm.Flags.DebugLogFile, "debuglog", "", "the debug log file")
+	flag.StringVar(&cm.Flags.PidFile, "pidfile", "/tmp/remote_syslog.pid", "the pid file")
 	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	flag.Var(&cm.Flags.RefreshInterval, "refresh", "How often to check for new files")
+	flag.BoolVar(&cm.Flags.Daemonize, "daemonize", false, "whether to daemonize")
 	flag.Parse()
 }
 
@@ -202,6 +208,10 @@ func (cm *ConfigManager) loadCABundle() error {
 	return nil
 }
 
+func (cm *ConfigManager) Daemonize() bool {
+	return cm.Flags.Daemonize
+}
+
 func (cm *ConfigManager) Hostname() string {
 	switch {
 	case cm.Flags.Hostname != "":
@@ -228,6 +238,19 @@ func (cm *ConfigManager) DestProtocol() string {
 
 func (cm *ConfigManager) Files() []string {
 	return cm.Config.Files
+}
+
+func (cm *ConfigManager) DebugLogFile() string {
+	switch {
+	case cm.Flags.DebugLogFile != "":
+		return cm.Flags.DebugLogFile
+	default:
+		return "/dev/null"
+	}
+}
+
+func (cm *ConfigManager) PidFile() string {
+	return cm.Flags.PidFile
 }
 
 func (cm *ConfigManager) LogLevels() string {
