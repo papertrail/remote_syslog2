@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/sevenscale/remote_syslog2/papertrail"
 	"github.com/sevenscale/remote_syslog2/syslog/certs"
+	"github.com/sevenscale/remote_syslog2/utils"
 	"io/ioutil"
 	"launchpad.net/goyaml"
 	"os"
@@ -150,7 +151,9 @@ func (cm *ConfigManager) parseFlags() {
 	flag.StringVar(&cm.Flags.PidFile, "pidfile", "/tmp/remote_syslog.pid", "the pid file")
 	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	flag.Var(&cm.Flags.RefreshInterval, "refresh", "How often to check for new files")
-	flag.BoolVar(&cm.Flags.Daemonize, "daemonize", false, "whether to daemonize")
+	if utils.CanDaemonize {
+		flag.BoolVar(&cm.Flags.Daemonize, "daemonize", false, "whether to daemonize")
+	}
 	flag.Parse()
 }
 

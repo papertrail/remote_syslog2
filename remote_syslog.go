@@ -1,12 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ActiveState/tail"
-	"github.com/VividCortex/godaemon"
 	"github.com/howbazaar/loggo"
 	"github.com/sevenscale/remote_syslog2/syslog"
-	"io"
+	"github.com/sevenscale/remote_syslog2/utils"
 	"net"
 	"os"
 	"path"
@@ -102,43 +100,11 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 	return false
 }
 
-func daemonize(logFilePath, pidFilePath string) {
-	logFile, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not open local log file: %v", err)
-		os.Exit(1)
-	}
-
-	stdout, stderr, err := godaemon.MakeDaemon(&godaemon.DaemonAttr{CaptureOutput: true})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not Daemonize: %v", err)
-		os.Exit(1)
-	}
-
-	pidFile, err := os.Create(pidFilePath)
-	if err == nil {
-		defer pidFile.Close()
-		_, err = fmt.Fprintln(pidFile, os.Getpid())
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not write PID file: %v", err)
-		os.Exit(1)
-	}
-
-	go func() {
-		io.Copy(logFile, stdout)
-	}()
-	go func() {
-		io.Copy(logFile, stderr)
-	}()
-
-}
-
 func main() {
 	cm := NewConfigManager()
 
 	if cm.Daemonize() {
-		daemonize(cm.DebugLogFile(), cm.PidFile())
+		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
 	}
 
 	loggo.ConfigureLoggers(cm.LogLevels())
