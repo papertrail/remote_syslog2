@@ -71,24 +71,12 @@ func dial(network, raddr string, bundle *certs.CertBundle) (*conn, error) {
 	}
 }
 
-// Connect to the server, retrying until successful
-func connect(network, raddr string, bundle *certs.CertBundle) *conn {
-	for {
-		c, err := dial(network, raddr, bundle)
-		if err == nil {
-			return c
-		} else {
-			time.Sleep(5 * time.Second)
-		}
-	}
-	panic("unreachable")
-}
-
 // A Logger is a connection to a syslog server. It reconnects on error.
 // Clients log by sending a Packet to the logger.Packets channel.
 type Logger struct {
 	conn           *conn
 	Packets        chan Packet
+	Errors         chan error
 	ClientHostname string
 
 	network    string
@@ -111,10 +99,34 @@ func Dial(clientHostname, network, raddr string, certBundle *certs.CertBundle) (
 			raddr:          raddr,
 			certBundle:     certBundle,
 			Packets:        make(chan Packet, 100),
+			Errors:         make(chan error, 0),
 			conn:           conn,
 		}
 		go logger.writeLoop()
 		return logger, nil
+	}
+}
+
+// Connect to the server, retrying every 10 seconds until successful.
+func (l *Logger) connect() {
+	for {
+		c, err := dial(l.network, l.raddr, l.certBundle)
+		if err == nil {
+			l.conn = c
+			return
+		} else {
+			l.handleError(err)
+			time.Sleep(10 * time.Second)
+		}
+	}
+	panic("unreachable")
+}
+
+// Send an error to the Error channel, but don't block if nothing is listening
+func (l *Logger) handleError(err error) {
+	select {
+	case l.Errors <- err:
+	default:
 	}
 }
 
@@ -124,7 +136,7 @@ func (l *Logger) writePacket(p Packet) {
 	var err error
 	for {
 		if l.conn.reconnectNeeded() {
-			l.conn = connect(l.network, l.raddr, l.certBundle)
+			l.connect()
 		}
 
 		switch l.conn.netConn.(type) {
@@ -138,8 +150,8 @@ func (l *Logger) writePacket(p Packet) {
 		if err == nil {
 			return
 		} else {
-			// todo: log?
-			time.Sleep(1 * time.Second)
+			l.handleError(err)
+			time.Sleep(10 * time.Second)
 		}
 	}
 }
