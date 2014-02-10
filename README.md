@@ -58,6 +58,10 @@ If you don't have it, install `gox`:
 Then:
 
     make
+    
+or on Linux (for x64 builds):
+    
+    make PLATFORMS=linux ARCH=amd64
 
 ## Building (older)
 
