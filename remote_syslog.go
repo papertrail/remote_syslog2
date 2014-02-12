@@ -114,6 +114,7 @@ func main() {
 
 	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger)
 
-	ch := make(chan bool)
-	<-ch
+	for err = range logger.Errors {
+		log.Errorf("Syslog error: %v", err)
+	}
 }
