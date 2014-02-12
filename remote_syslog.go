@@ -4,6 +4,7 @@ import (
 	"github.com/ActiveState/tail"
 	"github.com/howbazaar/loggo"
 	"github.com/sevenscale/remote_syslog2/syslog"
+	"github.com/sevenscale/remote_syslog2/utils"
 	"net"
 	"os"
 	"path"
@@ -101,6 +102,11 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 
 func main() {
 	cm := NewConfigManager()
+
+	if cm.Daemonize() {
+		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
+	}
+
 	loggo.ConfigureLoggers(cm.LogLevels())
 
 	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
