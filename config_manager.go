@@ -40,6 +40,8 @@ type ConfigManager struct {
 		DebugLogFile    string
 		PidFile         string
 		RefreshInterval RefreshInterval
+		UseTCP          bool
+		UseTLS          bool
 		NoDaemonize     bool
 	}
 }
@@ -149,8 +151,8 @@ func (cm *ConfigManager) parseFlags() {
 	// --parse-syslog
 	// -s --severity
 	// --strip-color
-	// --tcp
-	// --tls
+	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
+	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
@@ -215,7 +217,16 @@ func (cm ConfigManager) DestPort() int {
 }
 
 func (cm *ConfigManager) DestProtocol() string {
-	return cm.Config.Destination.Protocol
+	switch {
+	case cm.Flags.UseTLS:
+		return "tls"
+	case cm.Flags.UseTCP:
+		return "tcp"
+	case cm.Config.Destination.Protocol != "":
+		return cm.Config.Destination.Protocol
+	default:
+		return "udp"
+	}
 }
 
 func (cm *ConfigManager) Files() []string {
