@@ -35,6 +35,8 @@ type ConfigManager struct {
 	Config ConfigFile
 	Flags  struct {
 		Hostname        string
+		DestHost        string
+		DestPort        int
 		ConfigFile      string
 		LogLevels       string
 		DebugLogFile    string
@@ -140,8 +142,8 @@ func (cm *ConfigManager) Initialize() error {
 
 func (cm *ConfigManager) parseFlags() {
 	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", "/etc/log_files.yml", "Path to config")
-	// -d --dest-host
-	// -p --dest-port
+	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
+	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
 	if utils.CanDaemonize {
 		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
 	}
@@ -209,11 +211,25 @@ func (cm *ConfigManager) RootCAs() *x509.CertPool {
 }
 
 func (cm *ConfigManager) DestHost() string {
-	return cm.Config.Destination.Host
+	switch {
+	case cm.Flags.DestHost != "":
+		return cm.Flags.DestHost
+	case cm.Config.Destination.Host != "":
+		return cm.Config.Destination.Host
+	default:
+		return "logs.papertrailapp.com"
+	}
 }
 
 func (cm ConfigManager) DestPort() int {
-	return cm.Config.Destination.Port
+	switch {
+	case cm.Flags.DestPort != 0:
+		return cm.Flags.DestPort
+	case cm.Config.Destination.Port != 0:
+		return cm.Config.Destination.Port
+	default:
+		return 514
+	}
 }
 
 func (cm *ConfigManager) DestProtocol() string {
