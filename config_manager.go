@@ -1,10 +1,10 @@
 package main
 
 import (
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"github.com/sevenscale/remote_syslog2/papertrail"
-	"github.com/sevenscale/remote_syslog2/syslog/certs"
 	"github.com/sevenscale/remote_syslog2/utils"
 	"io/ioutil"
 	"launchpad.net/goyaml"
@@ -25,7 +25,6 @@ type ConfigFile struct {
 		Protocol string
 	}
 	Hostname string
-	CABundle string `yaml:"ca_bundle"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"refresh"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
@@ -43,7 +42,6 @@ type ConfigManager struct {
 		RefreshInterval RefreshInterval
 		Daemonize       bool
 	}
-	CertBundle certs.CertBundle
 }
 
 type RefreshInterval struct {
@@ -135,12 +133,6 @@ func (cm *ConfigManager) Initialize() error {
 	if err != nil {
 		return err
 	}
-
-	err = cm.loadCABundle()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -180,37 +172,6 @@ func (cm *ConfigManager) loadConfigFile() error {
 	return nil
 }
 
-func (cm *ConfigManager) loadCABundle() error {
-	bundle := certs.NewCertBundle()
-	if cm.Config.CABundle == "" {
-		log.Infof("Loading default certificates")
-
-		loaded, err := bundle.LoadDefaultBundle()
-		if loaded != "" {
-			log.Infof("Loaded certificates from %s", loaded)
-		}
-		if err != nil {
-			return err
-		}
-
-		log.Infof("Loading papertrail certificates")
-		err = bundle.ImportBytes(papertrail.BundleCert())
-		if err != nil {
-			return err
-		}
-
-	} else {
-		log.Infof("Loading certificates from %s", cm.Config.CABundle)
-		err := bundle.ImportFromFile(cm.Config.CABundle)
-		if err != nil {
-			return err
-		}
-
-	}
-	cm.CertBundle = bundle
-	return nil
-}
-
 func (cm *ConfigManager) Daemonize() bool {
 	return cm.Flags.Daemonize
 }
@@ -224,6 +185,14 @@ func (cm *ConfigManager) Hostname() string {
 	default:
 		hostname, _ := os.Hostname()
 		return hostname
+	}
+}
+
+func (cm *ConfigManager) RootCAs() *x509.CertPool {
+	if cm.DestProtocol() == "tls" && cm.DestHost() == "logs.papertrailapp.com" {
+		return papertrail.RootCA()
+	} else {
+		return nil
 	}
 }
 
