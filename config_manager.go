@@ -2,8 +2,8 @@ package main
 
 import (
 	"crypto/x509"
-	"flag"
 	"fmt"
+	"github.com/ogier/pflag"
 	"github.com/sevenscale/remote_syslog2/papertrail"
 	"github.com/sevenscale/remote_syslog2/utils"
 	"io/ioutil"
@@ -40,7 +40,7 @@ type ConfigManager struct {
 		DebugLogFile    string
 		PidFile         string
 		RefreshInterval RefreshInterval
-		Daemonize       bool
+		NoDaemonize     bool
 	}
 }
 
@@ -137,16 +137,26 @@ func (cm *ConfigManager) Initialize() error {
 }
 
 func (cm *ConfigManager) parseFlags() {
-	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
-	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
-	flag.StringVar(&cm.Flags.DebugLogFile, "debuglog", "", "the debug log file")
-	flag.StringVar(&cm.Flags.PidFile, "pidfile", "/tmp/remote_syslog.pid", "the pid file")
-	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
-	flag.Var(&cm.Flags.RefreshInterval, "refresh", "How often to check for new files")
+	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", "/etc/log_files.yml", "Path to config")
+	// -d --dest-host
+	// -p --dest-port
 	if utils.CanDaemonize {
-		flag.BoolVar(&cm.Flags.Daemonize, "daemonize", false, "whether to daemonize")
+		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
 	}
-	flag.Parse()
+	// -f --facility
+	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
+	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "/tmp/remote_syslog.pid", "Location of the PID file")
+	// --parse-syslog
+	// -s --severity
+	// --strip-color
+	// --tcp
+	// --tls
+	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
+	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
+	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
+	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
+	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	pflag.Parse()
 }
 
 func (cm *ConfigManager) readConfig() error {
@@ -173,7 +183,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 }
 
 func (cm *ConfigManager) Daemonize() bool {
-	return cm.Flags.Daemonize
+	return !cm.Flags.NoDaemonize
 }
 
 func (cm *ConfigManager) Hostname() string {
