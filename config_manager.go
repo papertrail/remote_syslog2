@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ogier/pflag"
 	"github.com/sevenscale/remote_syslog2/papertrail"
+	"github.com/sevenscale/remote_syslog2/syslog"
 	"github.com/sevenscale/remote_syslog2/utils"
 	"io/ioutil"
 	"launchpad.net/goyaml"
@@ -45,6 +46,8 @@ type ConfigManager struct {
 		UseTCP          bool
 		UseTLS          bool
 		NoDaemonize     bool
+		Severity        string
+		Facility        string
 	}
 }
 
@@ -147,11 +150,11 @@ func (cm *ConfigManager) parseFlags() {
 	if utils.CanDaemonize {
 		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
 	}
-	// -f --facility
+	pflag.StringVarP(&cm.Flags.Facility, "facility", "f", "user", "Facility")
 	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
 	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "/tmp/remote_syslog.pid", "Location of the PID file")
 	// --parse-syslog
-	// -s --severity
+	pflag.StringVarP(&cm.Flags.Severity, "severity", "s", "notice", "Severity")
 	// --strip-color
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
@@ -243,6 +246,24 @@ func (cm *ConfigManager) DestProtocol() string {
 	default:
 		return "udp"
 	}
+}
+
+func (cm *ConfigManager) Severity() syslog.Priority {
+	s, err := syslog.Severity(cm.Flags.Severity)
+	if err != nil {
+		log.Criticalf("%s is not a designated facility", cm.Flags.Severity)
+		os.Exit(1)
+	}
+	return s
+}
+
+func (cm *ConfigManager) Facility() syslog.Priority {
+	f, err := syslog.Facility(cm.Flags.Facility)
+	if err != nil {
+		log.Criticalf("%s is not a designated facility", cm.Flags.Facility)
+		os.Exit(1)
+	}
+	return f
 }
 
 func (cm *ConfigManager) Files() []string {
