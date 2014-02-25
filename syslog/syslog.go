@@ -8,8 +8,8 @@ package syslog
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"github.com/sevenscale/remote_syslog2/syslog/certs"
 	"io"
 	"net"
 	"time"
@@ -49,14 +49,17 @@ func (c *conn) reconnectNeeded() bool {
 }
 
 // dial connects to the server and set up a watching goroutine
-func dial(network, raddr string, bundle *certs.CertBundle) (*conn, error) {
+func dial(network, raddr string, rootCAs *x509.CertPool) (*conn, error) {
 	var netConn net.Conn
 	var err error
 
 	switch network {
 	case "tls":
-		config := tls.Config{InsecureSkipVerify: false, RootCAs: &(*bundle).CertPool}
-		netConn, err = tls.Dial("tcp", raddr, &config)
+		var config *tls.Config
+		if rootCAs != nil {
+			config = &tls.Config{RootCAs: rootCAs}
+		}
+		netConn, err = tls.Dial("tcp", raddr, config)
 	case "udp", "tcp":
 		netConn, err = net.Dial(network, raddr)
 	default:
@@ -79,16 +82,16 @@ type Logger struct {
 	Errors         chan error
 	ClientHostname string
 
-	network    string
-	raddr      string
-	certBundle *certs.CertBundle
+	network string
+	raddr   string
+	rootCAs *x509.CertPool
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
 // and launches a goroutine to watch logger.Packets for messages to log.
-func Dial(clientHostname, network, raddr string, certBundle *certs.CertBundle) (*Logger, error) {
+func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool) (*Logger, error) {
 	// dial once, just to make sure the network is working
-	conn, err := dial(network, raddr, certBundle)
+	conn, err := dial(network, raddr, rootCAs)
 
 	if err != nil {
 		return nil, err
@@ -97,7 +100,7 @@ func Dial(clientHostname, network, raddr string, certBundle *certs.CertBundle) (
 			ClientHostname: clientHostname,
 			network:        network,
 			raddr:          raddr,
-			certBundle:     certBundle,
+			rootCAs:        rootCAs,
 			Packets:        make(chan Packet, 100),
 			Errors:         make(chan error, 0),
 			conn:           conn,
@@ -110,7 +113,7 @@ func Dial(clientHostname, network, raddr string, certBundle *certs.CertBundle) (
 // Connect to the server, retrying every 10 seconds until successful.
 func (l *Logger) connect() {
 	for {
-		c, err := dial(l.network, l.raddr, l.certBundle)
+		c, err := dial(l.network, l.raddr, l.rootCAs)
 		if err == nil {
 			l.conn = c
 			return
