@@ -17,6 +17,7 @@ import (
 
 const (
 	MinimumRefreshInterval = (time.Duration(10) * time.Second)
+	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
 type ConfigFile struct {
@@ -145,7 +146,7 @@ func (cm *ConfigManager) Initialize() error {
 }
 
 func (cm *ConfigManager) parseFlags() {
-	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", "/etc/log_files.yml", "Path to config")
+	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", DefaultConfigFile, "Path to config")
 	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
 	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
 	if utils.CanDaemonize {
@@ -179,6 +180,10 @@ func (cm *ConfigManager) readConfig() error {
 
 func (cm *ConfigManager) loadConfigFile() error {
 	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
+	// don't error if the default config file isn't found
+	if os.IsNotExist(err) && cm.Flags.ConfigFile == DefaultConfigFile {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
