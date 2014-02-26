@@ -22,13 +22,13 @@ const (
 type ConfigFile struct {
 	Files       []string
 	Destination struct {
-		Host     string
-		Port     int
-		Protocol string
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
+		Protocol string `yaml:"protocol"`
 	}
-	Hostname string
+	Hostname string `yaml:"hostname"`
 	//SetYAML is only called on pointers
-	RefreshInterval *RefreshInterval `yaml:"refresh"`
+	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
 	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
 }
