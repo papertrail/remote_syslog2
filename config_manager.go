@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"launchpad.net/goyaml"
 	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 )
@@ -152,7 +153,7 @@ func (cm *ConfigManager) parseFlags() {
 	}
 	pflag.StringVarP(&cm.Flags.Facility, "facility", "f", "user", "Facility")
 	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
-	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "/tmp/remote_syslog.pid", "Location of the PID file")
+	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "", "Location of the PID file")
 	// --parse-syslog
 	pflag.StringVarP(&cm.Flags.Severity, "severity", "s", "notice", "Severity")
 	// --strip-color
@@ -279,8 +280,38 @@ func (cm *ConfigManager) DebugLogFile() string {
 	}
 }
 
+func (cm *ConfigManager) defaultPidFile() string {
+	pidFiles := []string{
+		"/var/run/remote_syslog.pid",
+		os.Getenv("HOME") + "/run/remote_syslog.pid",
+		os.Getenv("HOME") + "/tmp/remote_syslog.pid",
+		os.Getenv("HOME") + "/remote_syslog.pid",
+		os.TempDir() + "/remote_syslog.pid",
+		os.Getenv("TMPDIR") + "/remote_syslog.pid",
+	}
+	for _, f := range pidFiles {
+		dir := filepath.Dir(f)
+		dirStat, err := os.Stat(dir)
+		if err != nil || dirStat == nil || !dirStat.IsDir() {
+			continue
+		}
+		fd, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			continue
+		}
+		fd.Close()
+		return f
+	}
+	return "/tmp/remote_syslog.pid"
+}
+
 func (cm *ConfigManager) PidFile() string {
-	return cm.Flags.PidFile
+	switch {
+	case cm.Flags.PidFile != "":
+		return cm.Flags.PidFile
+	default:
+		return cm.defaultPidFile()
+	}
 }
 
 func (cm *ConfigManager) LogLevels() string {
