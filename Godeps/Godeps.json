@@ -22,6 +22,10 @@
 			"Rev": "7f0625dbb54fef2cfba674bc0dfc6c37d34bad27"
 		},
 		{
+			"ImportPath": "github.com/ogier/pflag",
+			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
+		},
+		{
 			"ImportPath": "github.com/onsi/ginkgo",
 			"Rev": "8c1fdb7320c261add3dd49219c031ae37a077ac4"
 		},

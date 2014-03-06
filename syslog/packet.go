@@ -6,49 +6,6 @@ import (
 	"time"
 )
 
-// A Syslog Priority is a combination of Severity and Facility.
-type Priority int
-
-// RFC5424 Severities
-const (
-	SevEmerg Priority = iota
-	SevAlert
-	SevCrit
-	SevErr
-	SevWarning
-	SevNotice
-	SevInfo
-	SevDebug
-)
-
-// RFC5424 Facilities
-const (
-	LogKern Priority = iota
-	LogUser
-	LogMail
-	LogDaemon
-	LogAuth
-	LogSyslog
-	LogLPR
-	LogNews
-	LogUUCP
-	LogCron
-	LogAuthPriv
-	LogFTP
-	LogNTP
-	LogAudit
-	LogAlert
-	LogAt
-	LogLocal0
-	LogLocal1
-	LogLocal2
-	LogLocal3
-	LogLocal4
-	LogLocal5
-	LogLocal6
-	LogLocal7
-)
-
 // A Packet represents an RFC5425 syslog message
 type Packet struct {
 	Severity Priority

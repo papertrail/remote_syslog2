@@ -2,31 +2,34 @@ package main
 
 import (
 	"crypto/x509"
-	"flag"
 	"fmt"
+	"github.com/ogier/pflag"
 	"github.com/sevenscale/remote_syslog2/papertrail"
+	"github.com/sevenscale/remote_syslog2/syslog"
 	"github.com/sevenscale/remote_syslog2/utils"
 	"io/ioutil"
 	"launchpad.net/goyaml"
 	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 )
 
 const (
 	MinimumRefreshInterval = (time.Duration(10) * time.Second)
+	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
 type ConfigFile struct {
 	Files       []string
 	Destination struct {
-		Host     string
-		Port     int
-		Protocol string
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
+		Protocol string `yaml:"protocol"`
 	}
-	Hostname string
+	Hostname string `yaml:"hostname"`
 	//SetYAML is only called on pointers
-	RefreshInterval *RefreshInterval `yaml:"refresh"`
+	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
 	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
 }
@@ -35,12 +38,18 @@ type ConfigManager struct {
 	Config ConfigFile
 	Flags  struct {
 		Hostname        string
+		DestHost        string
+		DestPort        int
 		ConfigFile      string
 		LogLevels       string
 		DebugLogFile    string
 		PidFile         string
 		RefreshInterval RefreshInterval
-		Daemonize       bool
+		UseTCP          bool
+		UseTLS          bool
+		NoDaemonize     bool
+		Severity        string
+		Facility        string
 	}
 }
 
@@ -137,16 +146,26 @@ func (cm *ConfigManager) Initialize() error {
 }
 
 func (cm *ConfigManager) parseFlags() {
-	flag.StringVar(&cm.Flags.ConfigFile, "config", "/etc/remote_syslog2/config.yaml", "the configuration file")
-	flag.StringVar(&cm.Flags.Hostname, "hostname", "", "the name of this host")
-	flag.StringVar(&cm.Flags.DebugLogFile, "debuglog", "", "the debug log file")
-	flag.StringVar(&cm.Flags.PidFile, "pidfile", "/tmp/remote_syslog.pid", "the pid file")
-	flag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
-	flag.Var(&cm.Flags.RefreshInterval, "refresh", "How often to check for new files")
+	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", DefaultConfigFile, "Path to config")
+	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
+	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
 	if utils.CanDaemonize {
-		flag.BoolVar(&cm.Flags.Daemonize, "daemonize", false, "whether to daemonize")
+		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
 	}
-	flag.Parse()
+	pflag.StringVarP(&cm.Flags.Facility, "facility", "f", "user", "Facility")
+	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
+	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "", "Location of the PID file")
+	// --parse-syslog
+	pflag.StringVarP(&cm.Flags.Severity, "severity", "s", "notice", "Severity")
+	// --strip-color
+	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
+	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
+	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
+	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
+	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
+	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
+	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	pflag.Parse()
 }
 
 func (cm *ConfigManager) readConfig() error {
@@ -161,6 +180,10 @@ func (cm *ConfigManager) readConfig() error {
 
 func (cm *ConfigManager) loadConfigFile() error {
 	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
+	// don't error if the default config file isn't found
+	if os.IsNotExist(err) && cm.Flags.ConfigFile == DefaultConfigFile {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
@@ -173,7 +196,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 }
 
 func (cm *ConfigManager) Daemonize() bool {
-	return cm.Flags.Daemonize
+	return !cm.Flags.NoDaemonize
 }
 
 func (cm *ConfigManager) Hostname() string {
@@ -197,15 +220,56 @@ func (cm *ConfigManager) RootCAs() *x509.CertPool {
 }
 
 func (cm *ConfigManager) DestHost() string {
-	return cm.Config.Destination.Host
+	switch {
+	case cm.Flags.DestHost != "":
+		return cm.Flags.DestHost
+	case cm.Config.Destination.Host != "":
+		return cm.Config.Destination.Host
+	default:
+		return "logs.papertrailapp.com"
+	}
 }
 
 func (cm ConfigManager) DestPort() int {
-	return cm.Config.Destination.Port
+	switch {
+	case cm.Flags.DestPort != 0:
+		return cm.Flags.DestPort
+	case cm.Config.Destination.Port != 0:
+		return cm.Config.Destination.Port
+	default:
+		return 514
+	}
 }
 
 func (cm *ConfigManager) DestProtocol() string {
-	return cm.Config.Destination.Protocol
+	switch {
+	case cm.Flags.UseTLS:
+		return "tls"
+	case cm.Flags.UseTCP:
+		return "tcp"
+	case cm.Config.Destination.Protocol != "":
+		return cm.Config.Destination.Protocol
+	default:
+		return "udp"
+	}
+}
+
+func (cm *ConfigManager) Severity() syslog.Priority {
+	s, err := syslog.Severity(cm.Flags.Severity)
+	if err != nil {
+		log.Criticalf("%s is not a designated facility", cm.Flags.Severity)
+		os.Exit(1)
+	}
+	return s
+}
+
+func (cm *ConfigManager) Facility() syslog.Priority {
+	f, err := syslog.Facility(cm.Flags.Facility)
+	if err != nil {
+		log.Criticalf("%s is not a designated facility", cm.Flags.Facility)
+		os.Exit(1)
+	}
+	return f
 }
 
 func (cm *ConfigManager) Files() []string {
@@ -221,8 +285,38 @@ func (cm *ConfigManager) DebugLogFile() string {
 	}
 }
 
+func (cm *ConfigManager) defaultPidFile() string {
+	pidFiles := []string{
+		"/var/run/remote_syslog.pid",
+		os.Getenv("HOME") + "/run/remote_syslog.pid",
+		os.Getenv("HOME") + "/tmp/remote_syslog.pid",
+		os.Getenv("HOME") + "/remote_syslog.pid",
+		os.TempDir() + "/remote_syslog.pid",
+		os.Getenv("TMPDIR") + "/remote_syslog.pid",
+	}
+	for _, f := range pidFiles {
+		dir := filepath.Dir(f)
+		dirStat, err := os.Stat(dir)
+		if err != nil || dirStat == nil || !dirStat.IsDir() {
+			continue
+		}
+		fd, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			continue
+		}
+		fd.Close()
+		return f
+	}
+	return "/tmp/remote_syslog.pid"
+}
+
 func (cm *ConfigManager) PidFile() string {
-	return cm.Flags.PidFile
+	switch {
+	case cm.Flags.PidFile != "":
+		return cm.Flags.PidFile
+	default:
+		return cm.defaultPidFile()
+	}
 }
 
 func (cm *ConfigManager) LogLevels() string {
