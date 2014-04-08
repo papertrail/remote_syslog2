@@ -2,8 +2,8 @@ package papertrail
 
 import (
 	"crypto/md5"
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestCerts(t *testing.T) {

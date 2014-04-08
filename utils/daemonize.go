@@ -4,9 +4,10 @@ package utils
 
 import (
 	"fmt"
-	"github.com/VividCortex/godaemon"
 	"io"
 	"os"
+
+	"github.com/VividCortex/godaemon"
 )
 
 const CanDaemonize = true
