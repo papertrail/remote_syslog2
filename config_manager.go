@@ -224,11 +224,11 @@ func (cm *ConfigManager) DestHost() string {
 	switch {
 	case cm.Flags.DestHost != "":
 		return cm.Flags.DestHost
-	case cm.Config.Destination.Host != "":
-		return cm.Config.Destination.Host
-	default:
-		return "logs.papertrailapp.com"
+	case cm.Config.Destination.Host == "":
+		log.Criticalf("No destination hostname specified")
+		os.Exit(1)
 	}
+	return cm.Config.Destination.Host
 }
 
 func (cm ConfigManager) DestPort() int {

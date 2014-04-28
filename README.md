@@ -49,6 +49,12 @@ Untar the package and copy the "remote_syslog" executable into your $PATH.
           --tls=false: Connect via TCP with TLS
 
 
+## Changes from remote_syslog 1
+
+* Default hostname has been removed. Either the `host` config file
+option or the `-d` invocation flag are required.
+
+
 ## Development
 
 remote_syslog2 is written in go, and uses [godep]
