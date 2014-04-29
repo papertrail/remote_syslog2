@@ -3,16 +3,17 @@ package main
 import (
 	"crypto/x509"
 	"fmt"
-	"github.com/ogier/pflag"
-	"github.com/sevenscale/remote_syslog2/papertrail"
-	"github.com/sevenscale/remote_syslog2/syslog"
-	"github.com/sevenscale/remote_syslog2/utils"
 	"io/ioutil"
-	"launchpad.net/goyaml"
 	"os"
 	"path/filepath"
 	"regexp"
 	"time"
+
+	"github.com/ogier/pflag"
+	"github.com/papertrail/remote_syslog2/papertrail"
+	"github.com/papertrail/remote_syslog2/syslog"
+	"github.com/papertrail/remote_syslog2/utils"
+	"launchpad.net/goyaml"
 )
 
 const (

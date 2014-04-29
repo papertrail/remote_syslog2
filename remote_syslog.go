@@ -1,10 +1,6 @@
 package main
 
 import (
-	"github.com/ActiveState/tail"
-	"github.com/howbazaar/loggo"
-	"github.com/sevenscale/remote_syslog2/syslog"
-	"github.com/sevenscale/remote_syslog2/utils"
 	"net"
 	"os"
 	"path"
@@ -12,6 +8,11 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/ActiveState/tail"
+	"github.com/howbazaar/loggo"
+	"github.com/papertrail/remote_syslog2/syslog"
+	"github.com/papertrail/remote_syslog2/utils"
 )
 
 var log = loggo.GetLogger("")

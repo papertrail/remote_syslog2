@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/sevenscale/remote_syslog2",
+	"ImportPath": "github.com/papertrail/remote_syslog2",
 	"GoVersion": "go1.2",
 	"Packages": [
 		"./..."
