@@ -15,10 +15,14 @@ This code is tested with the hosted log management service
 [Papertrail] and should work for transmitting to
 any syslog server.
 
-remote_syslog2 is a rewrite of the ruby
-[remote_syslog] package. Not all
+## Migrating from remote_syslog
+
+remote_syslog2 is a rewrite of the ruby [remote_syslog] package. Not all
 features of the ruby version are supported, and there are some backwards
 incompatible changes.
+
+Also, as of this writing, remote_syslog2 is still beta and should not be
+considered feature complete.
 
 
 ## Installing
@@ -35,7 +39,7 @@ Untar the package and copy the "remote_syslog" executable into your $PATH.
       -c, --configfile="/etc/log_files.yml": Path to config
           --debug-log-cfg="": the debug log file
       -d, --dest-host="": Destination syslog hostname or IP
-      -p, --dest-port=0: Destination syslog port
+      -p, --dest-port=514: Destination syslog port
           --eventmachine-tail=false: No action, provided for backwards compatibility
       -f, --facility="user": Facility
           --hostname="": Local hostname to send from
@@ -55,11 +59,17 @@ Untar the package and copy the "remote_syslog" executable into your $PATH.
 option or the `-d` invocation flag are required.
 
 
+## Reporting bugs
+
+1. See whether the issue has already been reported: <https://github.com/papertrail/remote_syslog/issues/>
+2. If you don't find one, create an issue with a repro case.
+
+
 ## Development
 
-remote_syslog2 is written in go, and uses [godep]
-to manage dependencies. To get everything set up,
-[install go][goinstall] then run:
+remote_syslog2 is written in go, and uses [godep] to manage
+dependencies. To get everything set up, [install go][goinstall] then
+run:
 
     go get github.com/kr/godep
     go get github.com/mitchellh/gox
@@ -76,12 +86,6 @@ To run tests:
 ## Building
 
     make
-
-
-## Reporting bugs
-
-1. See whether the issue has already been reported: <https://github.com/papertrail/remote_syslog/issues/>
-2. If you don't find one, create an issue with a repro case.
 
 
 ## Contributing
