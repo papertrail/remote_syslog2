@@ -15,7 +15,7 @@ This code is tested with the hosted log management service
 [Papertrail] and should work for transmitting to
 any syslog server.
 
-## Migrating from remote_syslog
+## Migrating from remote_syslog 1
 
 remote_syslog2 is a rewrite of the ruby [remote_syslog] package. Not all
 features of the ruby version are supported, and there are some backwards
@@ -23,6 +23,15 @@ incompatible changes.
 
 Also, as of this writing, remote_syslog2 is still beta and should not be
 considered feature complete.
+
+### Changes from remote_syslog 1
+
+* Specifying log files on the command line is not yet supported.
+* The syntax of some command-line arguments have changed slightly,
+though most are identical.
+* Default hostname has been removed. Either the `host` config file
+option or the `-d` invocation flag are required.
+
 
 
 ## Installing
@@ -51,12 +60,6 @@ Untar the package and copy the "remote_syslog" executable into your $PATH.
       -s, --severity="notice": Severity
           --tcp=false: Connect via TCP (no TLS)
           --tls=false: Connect via TCP with TLS
-
-
-## Changes from remote_syslog 1
-
-* Default hostname has been removed. Either the `host` config file
-option or the `-d` invocation flag are required.
 
 
 ## Reporting bugs
