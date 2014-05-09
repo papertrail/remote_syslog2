@@ -5,7 +5,6 @@ package godaemon
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -13,7 +12,7 @@ import (
 // executable.  It is used internally by the godaemon package, and exported
 // publicly because it's useful outside of the package too.
 func GetExecutablePath() (string, error) {
-	exePath, err := os.Readlink("/proc/self/exe")
+	exePath, err := Readlink("/proc/self/exe")
 
 	if err != nil {
 		err = fmt.Errorf("can't read /proc/self/exe: %v", err)
