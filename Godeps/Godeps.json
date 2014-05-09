@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/papertrail/remote_syslog2",
-	"GoVersion": "go1.2",
-	"Packages": [
-		"./..."
-	],
+	"GoVersion": "go1.2.1",
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
@@ -24,14 +21,6 @@
 		{
 			"ImportPath": "github.com/ogier/pflag",
 			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
-		},
-		{
-			"ImportPath": "github.com/onsi/ginkgo",
-			"Rev": "8c1fdb7320c261add3dd49219c031ae37a077ac4"
-		},
-		{
-			"ImportPath": "github.com/onsi/gomega",
-			"Rev": "1a1f88a0799ac4009af5262e3add6a8486a8270f"
 		},
 		{
 			"ImportPath": "launchpad.net/goyaml",
