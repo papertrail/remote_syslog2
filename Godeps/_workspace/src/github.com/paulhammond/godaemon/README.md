@@ -43,6 +43,18 @@ two valid readers (`io.Reader`) that you can read from the program itself.
 That's particularly useful for functions that write error or diagnosis messages
 right to the error output, which are normally lost in a daemon.
 
+Use the `Files` attribute if you need to inherit open files into the daemon.
+This is primarily intended for avoiding race conditions when holding locks on
+those files (flocks). Releasing and re-acquiring locks between successive fork
+calls opens up the chance for another program to steal the lock. However, by
+declaring your file descriptors in the `Files` attribute, `MakeDaemon()` will
+guarantee that locks are not released throughout the whole process. Your daemon
+will inherit the file still holding the same locks, with no other process having
+intervened in between. See the
+[package documentation](http://godoc.org/github.com/VividCortex/godaemon) for
+more details and sample code. (Note that you shouldn't use this feature to
+inherit TTY descriptors; otherwise what you get is technically not a daemon.)
+
 
 ## Contribute
 

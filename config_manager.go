@@ -36,8 +36,9 @@ type ConfigFile struct {
 }
 
 type ConfigManager struct {
-	Config ConfigFile
-	Flags  struct {
+	Config    ConfigFile
+	FlagFiles []string
+	Flags     struct {
 		Hostname        string
 		DestHost        string
 		DestPort        int
@@ -167,6 +168,7 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	pflag.Parse()
+	cm.FlagFiles = pflag.Args()
 }
 
 func (cm *ConfigManager) readConfig() error {
@@ -274,7 +276,11 @@ func (cm *ConfigManager) Facility() syslog.Priority {
 }
 
 func (cm *ConfigManager) Files() []string {
-	return cm.Config.Files
+	if len(cm.FlagFiles) > 0 {
+		return cm.FlagFiles
+	} else {
+		return cm.Config.Files
+	}
 }
 
 func (cm *ConfigManager) DebugLogFile() string {

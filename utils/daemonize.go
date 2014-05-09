@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/VividCortex/godaemon"
+	"github.com/paulhammond/godaemon"
 )
 
 const CanDaemonize = true
@@ -19,7 +19,7 @@ func Daemonize(logFilePath, pidFilePath string) {
 		os.Exit(1)
 	}
 
-	stdout, stderr, err := godaemon.MakeDaemon(&godaemon.DaemonAttr{CaptureOutput: true})
+	stdout, stderr, err := godaemon.MakeDaemon(&godaemon.DaemonAttr{CaptureOutput: true, NoChdir: true})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Could not Daemonize: %v", err)
 		os.Exit(1)
