@@ -53,8 +53,8 @@ endif
 	}
 
 	type godep >/dev/null 2>&1|| { \
-	  echo "\033[1;33mGodep is not installed. See https://github.com/kr/godep\033[m"; \
-	  echo "$$ go get github.com/kr/godep"; \
+	  echo "\033[1;33mGodep is not installed. See https://github.com/tools/godep\033[m"; \
+	  echo "$$ go get github.com/tools/godep"; \
 	  exit 1; \
 	}
 
