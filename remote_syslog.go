@@ -68,7 +68,7 @@ func globFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns [
 	log.Debugf("Evaluating file globs")
 	for _, glob := range globs {
 
-		files, err := filepath.Glob(glob)
+		files, err := filepath.Glob(utils.ResolvePath(glob))
 
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob, err)
