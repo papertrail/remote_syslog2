@@ -276,11 +276,7 @@ func (cm *ConfigManager) Facility() syslog.Priority {
 }
 
 func (cm *ConfigManager) Files() []string {
-	if len(cm.FlagFiles) > 0 {
-		return cm.FlagFiles
-	} else {
-		return cm.Config.Files
-	}
+	return append(cm.FlagFiles, cm.Config.Files...)
 }
 
 func (cm *ConfigManager) DebugLogFile() string {
