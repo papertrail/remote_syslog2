@@ -152,6 +152,8 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
 	if utils.CanDaemonize {
 		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
+	} else {
+		cm.Flags.NoDaemonize = true
 	}
 	pflag.StringVarP(&cm.Flags.Facility, "facility", "f", "user", "Facility")
 	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
