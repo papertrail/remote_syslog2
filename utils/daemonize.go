@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/VividCortex/godaemon"
+	"github.com/nightlyone/lockfile"
 )
 
 const CanDaemonize = true
@@ -25,20 +26,18 @@ func Daemonize(logFilePath, pidFilePath string) {
 		os.Exit(1)
 	}
 
-	pidFile, err := os.Create(pidFilePath)
-	if err == nil {
-		defer pidFile.Close()
-		_, err = fmt.Fprintln(pidFile, os.Getpid())
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not write PID file: %v", err)
-		os.Exit(1)
-	}
-
 	go func() {
 		io.Copy(logFile, stdout)
 	}()
 	go func() {
 		io.Copy(logFile, stderr)
 	}()
+
+	lock, err := lockfile.New(pidFilePath)
+	err = lock.TryLock()
+	if err != nil {
+		fmt.Println("Cannot lock \"%v\": %v", lock, err)
+		os.Exit(1)
+	}
+
 }
