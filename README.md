@@ -26,7 +26,6 @@ considered feature complete.
 
 ### Changes from remote_syslog 1
 
-* Specifying log files on the command line is not yet supported.
 * The syntax of some command-line arguments have changed slightly,
 though most are identical.
 * Default hostname has been removed. Either the `host` config file
@@ -64,7 +63,7 @@ Untar the package and copy the "remote_syslog" executable into your $PATH.
 
 ## Reporting bugs
 
-1. See whether the issue has already been reported: <https://github.com/papertrail/remote_syslog/issues/>
+1. See whether the issue has already been reported: <https://github.com/papertrail/remote_syslog2/issues/>
 2. If you don't find one, create an issue with a repro case.
 
 
