@@ -16,7 +16,7 @@ and should work for transmitting to any syslog server.
 
 ## Download
 
-Visit [Releases].
+Visit [Releases][].
 
 ## Migrating from remote_syslog 1
 
