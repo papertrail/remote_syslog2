@@ -24,8 +24,10 @@ remote_syslog2 is a rewrite of the ruby [remote_syslog] package. Not all
 features of the ruby version are supported, and there are some backwards
 incompatible changes.
 
-Also, as of this writing, remote_syslog2 is still beta and should not be
-considered feature complete.
+### Which should I use?
+
+Use remote_syslog2 (this README and application) unless you have a
+specific reason to use remote_syslog1.
 
 ### Changes from remote_syslog 1
 
