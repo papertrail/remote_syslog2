@@ -43,8 +43,10 @@ option or the `-d` invocation flag are required.
 Precompiled binaries for Mac, Linux and Windows are available on the
 [remote_syslog2 releases page][releases].
 
-Untar the package and copy the "remote_syslog" executable into your $PATH.
-
+Untar the package, copy the "remote_syslog" executable into your $PATH,
+and then customize the included example_config.yaml with the log file paths
+to read and the host/port to log to. These can also be specified as
+command-line arguments (below).
 
 ## Usage
 
@@ -64,6 +66,192 @@ Untar the package and copy the "remote_syslog" executable into your $PATH.
       -s, --severity="notice": Severity
           --tcp=false: Connect via TCP (no TLS)
           --tls=false: Connect via TCP with TLS
+
+
+## Example
+
+Daemonize and collect messages from files listed in `./example_config.yaml` as
+well as the file `/var/log/mysqld.log`. Write PID to `/tmp/remote_syslog.pid`
+and send to port `logs.papertrailapp.com:12345`:
+
+    $ remote_syslog -c example_config.yaml -p 12345 --pid-file=/tmp/remote_syslog.pid /var/log/mysqld.log
+
+Stay attached to the terminal, look for and use `/etc/log_files.yml` if it
+exists, and send with facility local0 to `a.example.com:514`:
+
+    $ remote_syslog -D -d a.example.com -f local0 /var/log/mysqld.log
+
+
+## Auto-starting at boot
+
+Sample init files can be found [here](https://github.com/papertrail/remote_syslog2/blob/master/examples/). You may be able to:
+
+    $ cp examples/remote_syslog.init.d /etc/init.d/remote_syslog
+    $ chmod 755 /etc/init.d/remote_syslog
+
+And then ensure it's started at boot, either by using:
+
+    $ sudo update-rc.d remote_syslog defaults
+
+or by creating a link manually:
+
+    $ sudo ln -s /etc/init.d/remote_syslog /etc/rc3.d/S30remote_syslog
+
+remote_syslog will daemonize by default.
+
+Init files: [remote_syslog.init.d](https://github.com/papertrail/remote_syslog2/blob/master/examples/remote_syslog.init.d) (init.d), OS X [launchd](https://github.com/papertrail/remote_syslog2/blob/master/examples/com.papertrailapp.remote_syslog.plist), [supervisor](https://github.com/papertrail/remote_syslog2/blob/master/examples/remote_syslog.supervisor.conf), Ubuntu [upstart](https://github.com/papertrail/remote_syslog2/blob/master/examples/remote_syslog.upstart.conf)
+
+
+## Sending messages securely ##
+
+If the receiving system supports sending syslog over TCP with TLS, you can
+pass the `--tls` option when running `remote_syslog`:
+
+    $ remote_syslog -D --tls -p 1234 /var/log/mysqld.log
+
+or add `protocol: tls` to your configuration file
+
+
+## Configuration
+
+By default, remote_syslog looks for a configuration in `/etc/log_files.yml`.
+
+The archive comes with a [sample config](https://github.com/papertrail/remote_syslog2/blob/master/example_config.yaml). Optionally:
+
+    $ cp example_config.yaml.example /etc/log_files.yml
+
+`log_files.yml` has filenames to log from (as an array) and hostname and port
+to log to (as a hash). Wildcards are supported using * and standard shell
+globbing. Filenames given on the command line are additive to those in
+the config file.
+
+Only 1 destination server is supported; the command-line argument wins.
+
+    files:
+     - /var/log/httpd/access_log
+     - /var/log/httpd/error_log
+     - /var/log/mysqld.log
+     - /var/run/mysqld/mysqld-slow.log
+    destination:
+      host: logs.papertrailapp.com
+      port: 12345
+      protocol: tls
+
+remote_syslog sends the name of the file without a path ("mysqld.log") as
+the syslog tag (program name).
+
+After changing the configuration file, restart `remote_syslog` using the
+init script or by manually killing and restarting the process. For example:
+
+    /etc/init.d/remote_syslog restart
+
+
+## Advanced Configuration (Optional)
+
+Here's an [advanced config](https://github.com/papertrail/remote_syslog2/blob/master/examples/log_files.yml.example.advanced) which uses all options.
+
+### Override hostname
+
+Provide `--hostname somehostname` or use the `hostname` configuration option:
+
+    hostname: somehostname
+
+
+### Detecting new files
+
+remote_syslog automatically detects and activates new log files that match
+its file specifiers. For example, `*.log` may be provided as a file specifier,
+and remote_syslog will detect a `some.log` file created after it was started.
+Globs are re-checked every 10 seconds.
+
+Note: messages may be written to files in the 0-10 seconds between when the
+file is created and when the periodic glob check detects it. This data is not
+acted on.
+
+If globs are specified on the command-line, enclose each one in single-quotes
+(`'*.log'`) so the shell passes the raw glob string to remote_syslog (rather
+than the current set of matches). This is not necessary for globs defined in
+the config file.
+
+
+### Log rotation
+
+External log rotation scripts often move or remove an existing log file
+and replace it with a new one (at a new inode). The Linux standard script
+[logrotate](http://iain.cx/src/logrotate/) supports a `copytruncate` config
+option.  With that option, `logrotate` will copy files, operate on the copies,
+and truncate the original so that the inode remains the same.
+
+This comes closest to ensuring that programs watching these files (including
+`remote_syslog`) will not be affected by, or need to be notified of, the
+rotation. The only tradeoff of `copytruncate` is slightly higher disk usage
+during rotation, so we recommend this option whether or not you use
+`remote_syslog`.
+
+
+### Excluding files from being sent
+
+Provide one or more regular expressions to prevent certain files from being
+matched.
+
+    exclude_files:
+	  - \.\d$
+	  - .bz2
+	  - .gz
+
+
+### Excluding lines matching a pattern
+
+There may be certain log messages that you do not want to be sent.  These may be
+repetitive log lines that are "noise" that you might not be able to filter out
+easily from the respective application.  To filter these lines, use the
+exclude_patterns with an array or regexes:
+
+    exclude_patterns:
+     - exclude this
+     - \d+ things
+
+
+### Multiple instances
+
+Run multiple instances to specify unique syslog hostnames.
+
+To do that, provide an alternate PID path as a command-line option to the
+additional instance(s). For example:
+
+    --pid-file=/var/run/remote_syslog_2.pid
+
+
+### Choosing app name
+
+remote_syslog uses the log file name (like "access_log") as the syslog
+program name, or what the syslog RFCs call the "tag." This is ideal unless
+remote_syslog watches many files that have the same name.
+
+In that case, tell remote_syslog to set another program name by creating
+symbolic link to the generically-named file:
+
+    cd /path/to/logs
+    ln -s generic_name.log unique_name.log
+
+Point remote_syslog at unique_name.log. It will use that as the program name.
+
+
+## Troubleshooting
+
+When running remote_syslog in the foreground using the `-D` switch, if you
+receive the error:
+
+    Error creating fsnotify watcher: inotify_init: too many open files
+
+increase the maximum number of inotify instances that can be created using:
+
+    echo VALUE >> /proc/sys/fs/inotify/max_user_instances
+
+where VALUE is greater than the present setting. Test this works and then
+apply it permanently by adding the following to `/etc/sysctl.conf:`:
+
+    fs.inotify.max_user_instances = VALUE
 
 
 ## Reporting bugs

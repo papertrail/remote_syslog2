@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Put this file in /Library/LaunchDaemons/ -->
+<plist version = "1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.papertrailapp.remote_syslog</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>UserName</key>
+    <string>root</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>remote_syslog</string>
+      <string>-D</string>
+    </array>
+  </dict>
+</plist>
