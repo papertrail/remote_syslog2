@@ -44,9 +44,17 @@ Precompiled binaries for Mac, Linux and Windows are available on the
 [remote_syslog2 releases page][releases].
 
 Untar the package, copy the "remote_syslog" executable into your $PATH,
-and then customize the included example_config.yaml with the log file paths
-to read and the host/port to log to. These can also be specified as
-command-line arguments (below).
+and then customize the included example_config.yml with the log file paths
+to read and the host/port to log to.
+
+Optionally, move and rename the configuration file to `/etc/log_files.yml` so
+that remote_syslog picks it up automatically. For example:
+
+    sudo cp ./remote_syslog /usr/local/bin
+    sudo cp example_config.yml /etc/log_files.yml
+    sudo vi /etc/log_files.yml
+
+Configuration directives can also be specified as command-line arguments (below).
 
 ## Usage
 
@@ -70,11 +78,11 @@ command-line arguments (below).
 
 ## Example
 
-Daemonize and collect messages from files listed in `./example_config.yaml` as
+Daemonize and collect messages from files listed in `./example_config.yml` as
 well as the file `/var/log/mysqld.log`. Write PID to `/tmp/remote_syslog.pid`
 and send to port `logs.papertrailapp.com:12345`:
 
-    $ remote_syslog -c example_config.yaml -p 12345 --pid-file=/tmp/remote_syslog.pid /var/log/mysqld.log
+    $ remote_syslog -c example_config.yml -p 12345 --pid-file=/tmp/remote_syslog.pid /var/log/mysqld.log
 
 Stay attached to the terminal, look for and use `/etc/log_files.yml` if it
 exists, and send with facility local0 to `a.example.com:514`:
@@ -109,16 +117,16 @@ pass the `--tls` option when running `remote_syslog`:
 
     $ remote_syslog -D --tls -p 1234 /var/log/mysqld.log
 
-or add `protocol: tls` to your configuration file
+or add `protocol: tls` to your configuration file.
 
 
 ## Configuration
 
 By default, remote_syslog looks for a configuration in `/etc/log_files.yml`.
 
-The archive comes with a [sample config](https://github.com/papertrail/remote_syslog2/blob/master/example_config.yaml). Optionally:
+The archive comes with a [sample config](https://github.com/papertrail/remote_syslog2/blob/master/example_config.yml). Optionally:
 
-    $ cp example_config.yaml.example /etc/log_files.yml
+    $ cp example_config.yml.example /etc/log_files.yml
 
 `log_files.yml` has filenames to log from (as an array) and hostname and port
 to log to (as a hash). Wildcards are supported using * and standard shell
@@ -195,9 +203,9 @@ Provide one or more regular expressions to prevent certain files from being
 matched.
 
     exclude_files:
-	  - \.\d$
-	  - .bz2
-	  - .gz
+      - \.\d$
+      - .bz2
+      - .gz
 
 
 ### Excluding lines matching a pattern
@@ -221,6 +229,10 @@ additional instance(s). For example:
 
     --pid-file=/var/run/remote_syslog_2.pid
 
+Note: Daemonized programs use PID files to identify whether the program is already
+running ([more](http://unix.stackexchange.com/questions/12815/what-are-pid-and-lock-files-for/12818#12818)). Like other daemons, remote_syslog will refuse to run as a
+daemon (the default mode) when a PID file is present. If a .pid file is
+present but the daemon is not actually running, remove the PID file.
 
 ### Choosing app name
 
@@ -244,12 +256,17 @@ receive the error:
 
     Error creating fsnotify watcher: inotify_init: too many open files
 
-increase the maximum number of inotify instances that can be created using:
+determine the maximum number of inotify instances that can be created using:
+
+    cat /proc/sys/fs/inotify/max_user_instances
+
+and then increase this limit using:
 
     echo VALUE >> /proc/sys/fs/inotify/max_user_instances
 
-where VALUE is greater than the present setting. Test this works and then
-apply it permanently by adding the following to `/etc/sysctl.conf:`:
+where VALUE is greater than the present setting. Confirm that remote_syslog starts
+up and then apply this new value permanently by adding the following to
+`/etc/sysctl.conf:`:
 
     fs.inotify.max_user_instances = VALUE
 
