@@ -313,7 +313,7 @@ func (cm *ConfigManager) defaultPidFile() string {
 		fd.Close()
 		err = os.Remove(tmpPidFile)
 		if err != nil {
-			// Die because the lockfile lib can't handle an existingfile
+			// Die because the lockfile lib can't handle an existing file
 			log.Criticalf("Can't remove temp pid file. Details: %s", err.Error())
 			os.Exit(1)
 		}
