@@ -309,7 +309,9 @@ func (cm *ConfigManager) defaultPidFile() string {
 		if err != nil {
 			continue
 		}
+		tmpPidFile := fd.Name()
 		fd.Close()
+		os.Remove(tmpPidFile)
 		return f
 	}
 	return "/tmp/remote_syslog.pid"
