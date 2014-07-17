@@ -309,14 +309,7 @@ func (cm *ConfigManager) defaultPidFile() string {
 		if err != nil {
 			continue
 		}
-		tmpPidFile := fd.Name()
 		fd.Close()
-		err = os.Remove(tmpPidFile)
-		if err != nil {
-			// Die because the lockfile lib can't handle an existing blank file
-			log.Criticalf("Can't remove temp pid file. Details: %s", err.Error())
-			os.Exit(1)
-		}
 		return f
 	}
 	return "/tmp/remote_syslog.pid"
