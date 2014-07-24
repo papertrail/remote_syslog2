@@ -9,7 +9,7 @@ X64_PLATFORMS := windows linux darwin
 BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/386 )
 BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/amd64 )
 
-BUILD_DOCS := README.md LICENSE example_config.yaml
+BUILD_DOCS := README.md LICENSE example_config.yml
 
 package: $(BUILD_PAIRS)
 

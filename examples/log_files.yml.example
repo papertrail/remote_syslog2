@@ -1,0 +1,10 @@
+files: 
+  - /var/log/httpd/access_log
+  - /var/log/httpd/error_log
+  - /opt/misc/*.log
+  - /var/log/mysqld.log
+  - /var/run/mysqld/mysqld-slow.log
+destination:
+  host: logs.papertrailapp.com
+  port: 12345   # NOTE: change to your Papertrail port
+  protocol: tls

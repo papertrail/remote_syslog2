@@ -1,0 +1,20 @@
+# see README - demonstrates all optional arguments and more glob formats
+files: 
+  - /var/log/httpd/access_log
+  - /var/log/httpd/error_log
+  - /opt/misc/*.log
+  - /home/**/*.log
+  - /var/log/mysqld.log
+  - /var/run/mysqld/mysqld-slow.log
+exclude_files:
+  - old
+  - 200\d
+hostname: www42  # override OS hostname
+exclude_patterns:
+  - exclude this
+  - \d+ things
+destination:
+  host: logs.papertrailapp.com
+  port: 12345   # NOTE: change this to YOUR papertrail port!
+  protocol: tls
+new_file_check_interval: 10 # Check every 10 seconds

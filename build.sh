@@ -7,7 +7,7 @@ set -e
 mkdir -p $BUILDPATH
 
 godep go build -o $BUILDPATH/remote_syslog2 .
-cp README.md LICENSE example_config.yaml $BUILDPATH
+cp README.md LICENSE example_config.yml $BUILDPATH
 
 cd $BUILDPATH/..
 rm -f remote_syslog2.tar.gz
