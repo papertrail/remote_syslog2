@@ -1,5 +1,7 @@
 # remote_syslog2
 
+[![Download remote_syslog2](http://papertrail.github.io/remote_syslog2/images/download.png)][releases]
+
 Remote_syslog tails one or more log files and sends syslog messages to a
 remote central syslog server. It generates packets itself, ignoring the system
 syslog daemon, so its configuration doesn't affect system-wide logging.
@@ -13,10 +15,6 @@ Uses:
 
 This code is tested with the hosted log management service [Papertrail]
 and should work for transmitting to any syslog server.
-
-## Download
-
-Visit [Releases][].
 
 ## Migrating from remote_syslog 1
 
@@ -313,7 +311,6 @@ Once you've made your great commits:
 
 
 [Papertrail]: http://papertrailapp.com/
-[Releases]: https://github.com/papertrail/remote_syslog2/releases
 [remote_syslog]: https://github.com/papertrail/remote_syslog
 [releases]: https://github.com/papertrail/remote_syslog2/releases
 
