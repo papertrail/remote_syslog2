@@ -2,7 +2,7 @@
 
 [![Download remote_syslog2](http://papertrail.github.io/remote_syslog2/images/download.png)][releases]
 
-Remote_syslog tails one or more log files and sends syslog messages to a
+remote_syslog tails one or more log files and sends syslog messages to a
 remote central syslog server. It generates packets itself, ignoring the system
 syslog daemon, so its configuration doesn't affect system-wide logging.
 
