@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -17,7 +18,7 @@ import (
 )
 
 const (
-	MinimumRefreshInterval = (time.Duration(10) * time.Second)
+	MinimumRefreshInterval = (time.Duration(1) * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
@@ -64,14 +65,21 @@ func (r *RefreshInterval) String() string {
 }
 
 func (r *RefreshInterval) Set(value string) error {
-	d, err := time.ParseDuration(value)
+	var d time.Duration
+	var err error
 
-	if err != nil {
-		return err
+	i, err := strconv.ParseUint(value, 10, 64)
+	if err == nil {
+		d = time.Duration(i) * time.Second
+	} else {
+		d, err = time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
 	}
 
 	if d < MinimumRefreshInterval {
-		return fmt.Errorf("refresh interval must be greater than %s", MinimumRefreshInterval)
+		return fmt.Errorf("refresh interval must be greater than or equal to %s", MinimumRefreshInterval)
 	}
 	r.Duration = d
 	return nil
