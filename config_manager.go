@@ -65,17 +65,37 @@ func (r *RefreshInterval) String() string {
 }
 
 func (r *RefreshInterval) Set(value string) error {
+	return r.SetAny(value)
+}
+
+func (r *RefreshInterval) SetAny(value interface{}) error {
 	var d time.Duration
+	var i int
+	isInt := false
 	var err error
 
-	i, err := strconv.ParseUint(value, 10, 64)
-	if err == nil {
-		d = time.Duration(i) * time.Second
-	} else {
-		d, err = time.ParseDuration(value)
-		if err != nil {
-			return err
+	switch val := value.(type) {
+	default:
+		panic(fmt.Sprintf("Unexpected type \"%T\" in RefreshInterval.Set ", val))
+
+  case string:
+		i, err = strconv.Atoi(val)
+		if err == nil {
+			isInt = true
+		} else {
+			d, err = time.ParseDuration(val)
+			if err != nil {
+				return fmt.Errorf("could not parse new_file_check_interval")
+			}
 		}
+
+	case int:
+		isInt = true
+		i = val
+  }
+
+	if isInt {
+		d = time.Duration(i) * time.Second
 	}
 
 	if d < MinimumRefreshInterval {
@@ -86,7 +106,7 @@ func (r *RefreshInterval) Set(value string) error {
 }
 
 func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
-	err := r.Set(value.(string))
+	err := r.SetAny(value)
 	if err != nil {
 		return false
 	}
@@ -340,7 +360,7 @@ func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 	switch {
 	case cm.Config.RefreshInterval != nil && cm.Flags.RefreshInterval.Duration != 0:
 		return cm.Flags.RefreshInterval
-	case cm.Config.RefreshInterval != nil:
+	case cm.Config.RefreshInterval != nil && cm.Config.RefreshInterval.Duration != 0:
 		return *cm.Config.RefreshInterval
 	case cm.Flags.RefreshInterval.Duration != 0:
 		return cm.Flags.RefreshInterval
