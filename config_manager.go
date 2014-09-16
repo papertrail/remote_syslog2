@@ -60,44 +60,11 @@ type RefreshInterval struct {
 	Duration time.Duration
 }
 
-func (r *RefreshInterval) String() string {
-	return fmt.Sprint(*r)
+func (r *RefreshInterval) SetInt(value int) error {
+	return r.SetDuration(time.Duration(value) * time.Second)
 }
 
-func (r *RefreshInterval) Set(value string) error {
-	return r.SetAny(value)
-}
-
-func (r *RefreshInterval) SetAny(value interface{}) error {
-	var d time.Duration
-	var i int
-	isInt := false
-	var err error
-
-	switch val := value.(type) {
-	default:
-		panic(fmt.Sprintf("Unexpected type \"%T\" in RefreshInterval.Set ", val))
-
-  case string:
-		i, err = strconv.Atoi(val)
-		if err == nil {
-			isInt = true
-		} else {
-			d, err = time.ParseDuration(val)
-			if err != nil {
-				return fmt.Errorf("could not parse new_file_check_interval")
-			}
-		}
-
-	case int:
-		isInt = true
-		i = val
-  }
-
-	if isInt {
-		d = time.Duration(i) * time.Second
-	}
-
+func (r *RefreshInterval) SetDuration(d time.Duration) error {
 	if d < MinimumRefreshInterval {
 		return fmt.Errorf("refresh interval must be greater than or equal to %s", MinimumRefreshInterval)
 	}
@@ -105,8 +72,41 @@ func (r *RefreshInterval) SetAny(value interface{}) error {
 	return nil
 }
 
+func (r *RefreshInterval) SetStr(value string) error {
+	i, err := strconv.Atoi(value)
+	if err == nil {
+		return r.SetInt(i)
+	}
+
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return fmt.Errorf("could not parse new_file_check_interval")
+	}
+	return r.SetDuration(d)
+}
+
+func (r *RefreshInterval) Set(value string) error {
+	return r.SetStr(value)
+}
+
+func (r *RefreshInterval) String() string {
+	return fmt.Sprint(*r)
+}
+
 func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
-	err := r.SetAny(value)
+	var err error
+
+	switch val := value.(type) {
+	default:
+		panic(fmt.Sprintf("Unexpected type \"%T\" in RefreshInterval.Set ", val))
+
+	case string:
+		err = r.SetStr(val)
+
+	case int:
+		err = r.SetInt(val)
+	}
+
 	if err != nil {
 		return false
 	}
