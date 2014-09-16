@@ -85,14 +85,17 @@ func (r *RefreshInterval) SetStr(value string) error {
 	return r.SetDuration(d)
 }
 
+// Implements pflag's Value interface
 func (r *RefreshInterval) Set(value string) error {
 	return r.SetStr(value)
 }
 
+// Implements pflag's Value interface
 func (r *RefreshInterval) String() string {
 	return fmt.Sprint(*r)
 }
 
+// Implements go-yaml's Setter interface
 func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
 	var err error
 
@@ -115,6 +118,7 @@ func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
 
 type RegexCollection []*regexp.Regexp
 
+// Implements pflag's Value interface
 func (r *RegexCollection) Set(value string) error {
 	exp, err := regexp.Compile(value)
 	if err != nil {
@@ -124,10 +128,12 @@ func (r *RegexCollection) Set(value string) error {
 	return nil
 }
 
+// Implements pflag's Value interface
 func (r *RegexCollection) String() string {
 	return fmt.Sprint(*r)
 }
 
+// Implements go-yaml's Setter interface
 func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
 	items, ok := value.([]interface{})
 
