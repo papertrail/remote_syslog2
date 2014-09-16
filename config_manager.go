@@ -98,7 +98,7 @@ func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
 
 	switch val := value.(type) {
 	default:
-		panic(fmt.Sprintf("Unexpected type \"%T\" in RefreshInterval.Set ", val))
+		panic(fmt.Sprintf("Unexpected type \"%T\" in RefreshInterval.SetYAML", val))
 
 	case string:
 		err = r.SetStr(val)
