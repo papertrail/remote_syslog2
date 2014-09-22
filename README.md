@@ -268,6 +268,11 @@ up and then apply this new value permanently by adding the following to
 
     fs.inotify.max_user_instances = VALUE
 
+## Credits
+
+* [Paul Morton](https://twitter.com/mortonpe)
+* [Papertrail](https://papertrailapp.com/) staff
+* [Paul Hammond](http://paulhammond.org/)
 
 ## Reporting bugs
 
