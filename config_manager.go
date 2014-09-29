@@ -13,7 +13,7 @@ import (
 	"github.com/papertrail/remote_syslog2/papertrail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
-	"launchpad.net/goyaml"
+ 	"gopkg.in/v1/yaml"
 )
 
 const (
@@ -193,7 +193,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
 
-	err = goyaml.Unmarshal(file, &cm.Config)
+	err = yaml.Unmarshal(file, &cm.Config)
 	if err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
