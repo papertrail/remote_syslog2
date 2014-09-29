@@ -6,7 +6,7 @@ import (
 
 	gc "launchpad.net/gocheck"
 
-	"github.com/howbazaar/loggo"
+	"github.com/loggo/loggo"
 )
 
 type writerBasicsSuite struct{}

@@ -5,12 +5,15 @@ package tail
 import (
 	"bufio"
 	"fmt"
+	"github.com/ActiveState/tail/ratelimiter"
 	"github.com/ActiveState/tail/util"
 	"github.com/ActiveState/tail/watch"
+	"gopkg.in/tomb.v1"
 	"io"
-	"launchpad.net/tomb"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -38,15 +41,19 @@ type SeekInfo struct {
 // Config is used to specify how a file must be tailed.
 type Config struct {
 	// File-specifc
-	Location  *SeekInfo // Seek to this location before tailing
-	ReOpen    bool      // Reopen recreated files (tail -F)
-	MustExist bool      // Fail early if the file does not exist
-	Poll      bool      // Poll for file changes instead of using inotify
-	LimitRate int64     // Maximum read rate (lines per second)
+	Location    *SeekInfo // Seek to this location before tailing
+	ReOpen      bool      // Reopen recreated files (tail -F)
+	MustExist   bool      // Fail early if the file does not exist
+	Poll        bool      // Poll for file changes instead of using inotify
+	RateLimiter *ratelimiter.LeakyBucket
 
 	// Generic IO
 	Follow      bool // Continue looking for new lines (tail -f)
 	MaxLineSize int  // If non-zero, split longer lines into multiple lines
+
+	// Logger, when nil, is set to tail.DefaultLogger
+	// To disable logging: set field to tail.DiscardingLogger
+	Logger *log.Logger
 }
 
 type Tail struct {
@@ -58,10 +65,16 @@ type Tail struct {
 	reader  *bufio.Reader
 	watcher watch.FileWatcher
 	changes *watch.FileChanges
-	rateMon *RateMonitor
 
 	tomb.Tomb // provides: Done, Kill, Dying
 }
+
+var (
+	// DefaultLogger is used when Config.Logger == nil
+	DefaultLogger = log.New(os.Stderr, "", log.LstdFlags)
+	// DiscardingLogger can be used to disable logging output
+	DiscardingLogger = log.New(ioutil.Discard, "", 0)
+)
 
 // TailFile begins tailing the file. Output stream is made available
 // via the `Tail.Lines` channel. To handle errors during tailing,
@@ -75,9 +88,13 @@ func TailFile(filename string, config Config) (*Tail, error) {
 	t := &Tail{
 		Filename: filename,
 		Lines:    make(chan *Line),
-		Config:   config}
+		Config:   config,
+	}
 
-	t.rateMon = new(RateMonitor)
+	// when Logger was not specified in config, use default logger
+	if t.Logger == nil {
+		t.Logger = log.New(os.Stderr, "", log.LstdFlags)
+	}
 
 	if t.Poll {
 		t.watcher = watch.NewPollingFileWatcher(filename)
@@ -87,7 +104,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 
 	if t.MustExist {
 		var err error
-		t.file, err = os.Open(t.Filename)
+		t.file, err = OpenFile(t.Filename)
 		if err != nil {
 			return nil, err
 		}
@@ -132,10 +149,10 @@ func (tail *Tail) reopen() error {
 	}
 	for {
 		var err error
-		tail.file, err = os.Open(tail.Filename)
+		tail.file, err = OpenFile(tail.Filename)
 		if err != nil {
 			if os.IsNotExist(err) {
-				log.Printf("Waiting for %s to appear...", tail.Filename)
+				tail.Logger.Printf("Waiting for %s to appear...", tail.Filename)
 				if err := tail.watcher.BlockUntilExists(&tail.Tomb); err != nil {
 					if err == tomb.ErrDying {
 						return err
@@ -151,8 +168,17 @@ func (tail *Tail) reopen() error {
 	return nil
 }
 
-func (tail *Tail) readLine() ([]byte, error) {
-	line, _, err := tail.reader.ReadLine()
+func (tail *Tail) readLine() (string, error) {
+	line, err := tail.reader.ReadString('\n')
+	if err != nil {
+		// Note ReadString "returns the data read before the error" in
+		// case of an error, including EOF, so we return it as is. The
+		// caller is expected to process it if err is EOF.
+		return line, err
+	}
+
+	line = strings.TrimRight(line, "\n")
+
 	return line, err
 }
 
@@ -174,44 +200,41 @@ func (tail *Tail) tailFileSync() {
 	// Seek to requested location on first open of the file.
 	if tail.Location != nil {
 		_, err := tail.file.Seek(tail.Location.Offset, tail.Location.Whence)
-		// log.Printf("Seeked %s - %+v\n", tail.Filename, tail.Location)
+		tail.Logger.Printf("Seeked %s - %+v\n", tail.Filename, tail.Location)
 		if err != nil {
 			tail.Killf("Seek error on %s: %s", tail.Filename, err)
 			return
 		}
 	}
 
-	tail.reader = bufio.NewReader(tail.file)
+	tail.openReader()
 
 	// Read line by line.
 	for {
 		line, err := tail.readLine()
 
-		switch err {
-		case nil:
-			if line != nil {
-				cooloff := !tail.sendLine(line)
-				if cooloff {
-					msg := "Too much activity; entering a cool-off period"
-					tail.Lines <- &Line{
-						msg,
-						time.Now(),
-						fmt.Errorf(msg)}
-					// Wait a second before seeking till the end of
-					// file when rate limit is reached.
-					select {
-					case <-time.After(time.Second):
-					case <-tail.Dying():
-						return
-					}
-					_, err := tail.file.Seek(0, 2) // Seek to fine end
-					if err != nil {
-						tail.Killf("Seek error on %s: %s", tail.Filename, err)
-						return
-					}
+		// Process `line` even if err is EOF.
+		if err == nil || (err == io.EOF && line != "") {
+			cooloff := !tail.sendLine(line)
+			if cooloff {
+				// Wait a second before seeking till the end of
+				// file when rate limit is reached.
+				msg := fmt.Sprintf(
+					"Too much log activity; waiting a second " +
+						"before resuming tailing")
+				tail.Lines <- &Line{msg, time.Now(), fmt.Errorf(msg)}
+				select {
+				case <-time.After(time.Second):
+				case <-tail.Dying():
+					return
+				}
+				err = tail.seekEnd()
+				if err != nil {
+					tail.Kill(err)
+					return
 				}
 			}
-		case io.EOF:
+		} else if err == io.EOF {
 			if !tail.Follow {
 				return
 			}
@@ -225,7 +248,8 @@ func (tail *Tail) tailFileSync() {
 				}
 				return
 			}
-		default: // non-EOF error
+		} else {
+			// non-EOF error
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
 			return
 		}
@@ -257,25 +281,25 @@ func (tail *Tail) waitForChanges() error {
 		tail.changes = nil
 		if tail.ReOpen {
 			// XXX: we must not log from a library.
-			log.Printf("Re-opening moved/deleted file %s ...", tail.Filename)
+			tail.Logger.Printf("Re-opening moved/deleted file %s ...", tail.Filename)
 			if err := tail.reopen(); err != nil {
 				return err
 			}
-			log.Printf("Successfully reopened %s", tail.Filename)
-			tail.reader = bufio.NewReader(tail.file)
+			tail.Logger.Printf("Successfully reopened %s", tail.Filename)
+			tail.openReader()
 			return nil
 		} else {
-			log.Printf("Stopping tail as file no longer exists: %s", tail.Filename)
+			tail.Logger.Printf("Stopping tail as file no longer exists: %s", tail.Filename)
 			return ErrStop
 		}
 	case <-tail.changes.Truncated:
 		// Always reopen truncated files (Follow is true)
-		log.Printf("Re-opening truncated file %s ...", tail.Filename)
+		tail.Logger.Printf("Re-opening truncated file %s ...", tail.Filename)
 		if err := tail.reopen(); err != nil {
 			return err
 		}
-		log.Printf("Successfully reopened truncated %s", tail.Filename)
-		tail.reader = bufio.NewReader(tail.file)
+		tail.Logger.Printf("Successfully reopened truncated %s", tail.Filename)
+		tail.openReader()
 		return nil
 	case <-tail.Dying():
 		return ErrStop
@@ -283,26 +307,44 @@ func (tail *Tail) waitForChanges() error {
 	panic("unreachable")
 }
 
+func (tail *Tail) openReader() {
+	if tail.MaxLineSize > 0 {
+		// add 2 to account for newline characters
+		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2)
+	} else {
+		tail.reader = bufio.NewReader(tail.file)
+	}
+}
+
+func (tail *Tail) seekEnd() error {
+	_, err := tail.file.Seek(0, 2)
+	if err != nil {
+		return fmt.Errorf("Seek error on %s: %s", tail.Filename, err)
+	}
+	// Reset the read buffer whenever the file is re-seek'ed
+	tail.reader.Reset(tail.file)
+	return nil
+}
+
 // sendLine sends the line(s) to Lines channel, splitting longer lines
 // if necessary. Return false if rate limit is reached.
-func (tail *Tail) sendLine(line []byte) bool {
+func (tail *Tail) sendLine(line string) bool {
 	now := time.Now()
-	nowUnix := now.Unix()
-	lines := []string{string(line)}
+	lines := []string{line}
 
 	// Split longer lines
 	if tail.MaxLineSize > 0 && len(line) > tail.MaxLineSize {
-		lines = util.PartitionString(
-			string(line), tail.MaxLineSize)
+		lines = util.PartitionString(line, tail.MaxLineSize)
 	}
 
 	for _, line := range lines {
 		tail.Lines <- &Line{line, now, nil}
-		rate := tail.rateMon.Tick(nowUnix)
-		if tail.LimitRate > 0 && rate > tail.LimitRate {
-			log.Printf("Rate limit (%v < %v) reached on file (%v); entering 1s cooloff period.\n",
-				tail.LimitRate,
-				rate,
+	}
+
+	if tail.Config.RateLimiter != nil {
+		ok := tail.Config.RateLimiter.Pour(uint16(len(lines)))
+		if !ok {
+			tail.Logger.Printf("Leaky bucket full (%v); entering 1s cooloff period.\n",
 				tail.Filename)
 			return false
 		}
@@ -312,7 +354,7 @@ func (tail *Tail) sendLine(line []byte) bool {
 }
 
 // Cleanup removes inotify watches added by the tail package. This function is
-// meant to be invoked from a process's exit handler. Linux kernel will not
+// meant to be invoked from a process's exit handler. Linux kernel may not
 // automatically remove inotify watches after the process exits.
 func Cleanup() {
 	watch.Cleanup()

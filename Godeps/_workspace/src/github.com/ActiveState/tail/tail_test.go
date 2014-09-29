@@ -8,8 +8,10 @@ package tail
 import (
 	"./watch"
 	_ "fmt"
+	"github.com/ActiveState/tail/ratelimiter"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -63,6 +65,35 @@ func TestMaxLineSize(_t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 	t.RemoveFile("test.txt")
 	tail.Stop()
+	Cleanup()
+}
+
+func TestOver4096ByteLine(_t *testing.T) {
+	t := NewTailTest("Over4096ByteLine", _t)
+	testString := strings.Repeat("a", 4097)
+	t.CreateFile("test.txt", "test\n"+testString+"\nhello\nworld\n")
+	tail := t.StartTail("test.txt", Config{Follow: true, Location: nil})
+	go t.VerifyTailOutput(tail, []string{"test", testString, "hello", "world"})
+
+	// Delete after a reasonable delay, to give tail sufficient time
+	// to read all lines.
+	<-time.After(100 * time.Millisecond)
+	t.RemoveFile("test.txt")
+	tail.Stop()
+	Cleanup()
+}
+func TestOver4096ByteLineWithSetMaxLineSize(_t *testing.T) {
+	t := NewTailTest("Over4096ByteLineMaxLineSize", _t)
+	testString := strings.Repeat("a", 4097)
+	t.CreateFile("test.txt", "test\n"+testString+"\nhello\nworld\n")
+	tail := t.StartTail("test.txt", Config{Follow: true, Location: nil, MaxLineSize: 4097})
+	go t.VerifyTailOutput(tail, []string{"test", testString, "hello", "world"})
+
+	// Delete after a reasonable delay, to give tail sufficient time
+	// to read all lines.
+	<-time.After(100 * time.Millisecond)
+	t.RemoveFile("test.txt")
+	// tail.Stop()
 	Cleanup()
 }
 
@@ -132,10 +163,13 @@ func TestLocationMiddle(_t *testing.T) {
 
 func _TestReOpen(_t *testing.T, poll bool) {
 	var name string
+	var delay time.Duration
 	if poll {
 		name = "reopen-polling"
+		delay = 300 * time.Millisecond // account for POLL_DURATION
 	} else {
 		name = "reopen-inotify"
+		delay = 100 * time.Millisecond
 	}
 	t := NewTailTest(name, _t)
 	t.CreateFile("test.txt", "hello\nworld\n")
@@ -146,22 +180,22 @@ func _TestReOpen(_t *testing.T, poll bool) {
 	go t.VerifyTailOutput(tail, []string{"hello", "world", "more", "data", "endofworld"})
 
 	// deletion must trigger reopen
-	<-time.After(100 * time.Millisecond)
+	<-time.After(delay)
 	t.RemoveFile("test.txt")
-	<-time.After(100 * time.Millisecond)
+	<-time.After(delay)
 	t.CreateFile("test.txt", "more\ndata\n")
 
 	// rename must trigger reopen
-	<-time.After(100 * time.Millisecond)
+	<-time.After(delay)
 	t.RenameFile("test.txt", "test.txt.rotated")
-	<-time.After(100 * time.Millisecond)
+	<-time.After(delay)
 	t.CreateFile("test.txt", "endofworld")
 
 	// Delete after a reasonable delay, to give tail sufficient time
 	// to read all lines.
-	<-time.After(100 * time.Millisecond)
+	<-time.After(delay)
 	t.RemoveFile("test.txt")
-	<-time.After(100 * time.Millisecond)
+	<-time.After(delay)
 
 	// Do not bother with stopping as it could kill the tomb during
 	// the reading of data written above. Timings can vary based on
@@ -226,22 +260,30 @@ func TestReSeekPolling(_t *testing.T) {
 
 func TestRateLimiting(_t *testing.T) {
 	t := NewTailTest("rate-limiting", _t)
-	t.CreateFile("test.txt", "hello\nworld\nagain\n")
+	t.CreateFile("test.txt", "hello\nworld\nagain\nextra\n")
 	config := Config{
-		Follow:    true,
-		LimitRate: 2}
+		Follow:      true,
+		RateLimiter: ratelimiter.NewLeakyBucket(2, time.Second)}
+	leakybucketFull := "Too much log activity; waiting a second before resuming tailing"
 	tail := t.StartTail("test.txt", config)
+
 	// TODO: also verify that tail resumes after the cooloff period.
-	go t.VerifyTailOutput(
-		tail, []string{
-			"hello", "world", "again",
-			"Too much activity; entering a cool-off period"})
+	go t.VerifyTailOutput(tail, []string{
+		"hello", "world", "again",
+		leakybucketFull,
+		"more", "data",
+		leakybucketFull})
+
+	// Add more data only after reasonable delay.
+	<-time.After(1200 * time.Millisecond)
+	t.AppendFile("test.txt", "more\ndata\n")
 
 	// Delete after a reasonable delay, to give tail sufficient time
 	// to read all lines.
 	<-time.After(100 * time.Millisecond)
 	t.RemoveFile("test.txt")
-	tail.Stop()
+
+	// tail.Stop()
 	Cleanup()
 }
 
@@ -360,18 +402,23 @@ func (t TailTest) VerifyTailOutput(tail *Tail, lines []string) {
 	for idx, line := range lines {
 		tailedLine, ok := <-tail.Lines
 		if !ok {
+			// tail.Lines is closed and empty.
 			err := tail.Err()
 			if err != nil {
-				t.Errorf("tail ended with error: %v", err)
+				t.Fatalf("tail ended with error: %v", err)
 			}
 			t.Fatalf("tail ended early; expecting more: %v", lines[idx:])
 		}
 		if tailedLine == nil {
 			t.Fatalf("tail.Lines returned nil; not possible")
 		}
+		// Note: not checking .Err as the `lines` argument is designed
+		// to match error strings as well.
 		if tailedLine.Text != line {
-			t.Fatalf("mismatch; %s (actual) != %s (expected)",
-				tailedLine.Text, line)
+			t.Fatalf(
+				"unexpected line/err from tail: "+
+					"expecting <<%s>>>, but got <<<%s>>>",
+				line, tailedLine.Text)
 		}
 	}
 	line, ok := <-tail.Lines

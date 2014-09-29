@@ -1,14 +1,16 @@
 # File system notifications for Go
 
-[![Build Status](https://goci.herokuapp.com/project/image/github.com/howeyc/fsnotify)](http://goci.me/project/github.com/howeyc/fsnotify) [![GoDoc](https://godoc.org/github.com/howeyc/fsnotify?status.png)](http://godoc.org/github.com/howeyc/fsnotify)
+[![GoDoc](https://godoc.org/github.com/howeyc/fsnotify?status.png)](http://godoc.org/github.com/howeyc/fsnotify)
 
-Cross platform, works on:
-* Windows
-* Linux
-* BSD
-* OSX
+Cross platform: Windows, Linux, BSD and OS X.
 
-Example:
+## Moving Notice
+
+There is a fork being actively developed with a new API in preparation for the Go Standard Library:
+[github.com/go-fsnotify/fsnotify](https://github.com/go-fsnotify/fsnotify)
+
+## Example:
+
 ```go
 package main
 
@@ -57,7 +59,7 @@ For each event:
 * IsModify()
 * IsRename()
 
-### FAQ
+## FAQ
 
 **When a file is moved to another directory is it still being watched?**
 
