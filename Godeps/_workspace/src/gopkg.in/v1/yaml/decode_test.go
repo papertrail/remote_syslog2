@@ -1,10 +1,12 @@
-package goyaml_test
+package yaml_test
 
 import (
-	. "launchpad.net/gocheck"
-	"launchpad.net/goyaml"
+	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v1"
 	"math"
 	"reflect"
+	"strings"
+	"time"
 )
 
 var unmarshalIntTest = 123
@@ -315,7 +317,10 @@ var unmarshalTests = []struct {
 		map[string]*string{"foo": new(string)},
 	}, {
 		"foo: null",
-		map[string]string{},
+		map[string]string{"foo": ""},
+	}, {
+		"foo: null",
+		map[string]interface{}{"foo": nil},
 	},
 
 	// Ignored field
@@ -350,6 +355,50 @@ var unmarshalTests = []struct {
 			C inlineB `yaml:",inline"`
 		}{1, inlineB{2, inlineC{3}}},
 	},
+
+	// bug 1243827
+	{
+		"a: -b_c",
+		map[string]interface{}{"a": "-b_c"},
+	},
+	{
+		"a: +b_c",
+		map[string]interface{}{"a": "+b_c"},
+	},
+	{
+		"a: 50cent_of_dollar",
+		map[string]interface{}{"a": "50cent_of_dollar"},
+	},
+
+	// Duration
+	{
+		"a: 3s",
+		map[string]time.Duration{"a": 3 * time.Second},
+	},
+
+	// Issue #24.
+	{
+		"a: <foo>",
+		map[string]string{"a": "<foo>"},
+	},
+
+	// Base 60 floats are obsolete and unsupported.
+	{
+		"a: 1:1\n",
+		map[string]string{"a": "1:1"},
+	},
+
+	// Binary data.
+	{
+		"a: !!binary gIGC\n",
+		map[string]string{"a": "\x80\x81\x82"},
+	}, {
+		"a: !!binary |\n  " + strings.Repeat("kJCQ", 17) + "kJ\n  CQ\n",
+		map[string]string{"a": strings.Repeat("\x90", 54)},
+	}, {
+		"a: !!binary |\n  " + strings.Repeat("A", 70) + "\n  ==\n",
+		map[string]string{"a": strings.Repeat("\x00", 52)},
+	},
 }
 
 type inlineB struct {
@@ -377,7 +426,7 @@ func (s *S) TestUnmarshal(c *C) {
 			pv := reflect.New(pt.Elem())
 			value = pv.Interface()
 		}
-		err := goyaml.Unmarshal([]byte(item.data), value)
+		err := yaml.Unmarshal([]byte(item.data), value)
 		c.Assert(err, IsNil, Commentf("Item #%d", i))
 		if t.Kind() == reflect.String {
 			c.Assert(*value.(*string), Equals, item.value, Commentf("Item #%d", i))
@@ -389,7 +438,7 @@ func (s *S) TestUnmarshal(c *C) {
 
 func (s *S) TestUnmarshalNaN(c *C) {
 	value := map[string]interface{}{}
-	err := goyaml.Unmarshal([]byte("notanum: .NaN"), &value)
+	err := yaml.Unmarshal([]byte("notanum: .NaN"), &value)
 	c.Assert(err, IsNil)
 	c.Assert(math.IsNaN(value["notanum"].(float64)), Equals, true)
 }
@@ -397,18 +446,21 @@ func (s *S) TestUnmarshalNaN(c *C) {
 var unmarshalErrorTests = []struct {
 	data, error string
 }{
-	{"v: !!float 'error'", "YAML error: Can't decode !!str 'error' as a !!float"},
+	{"v: !!float 'error'", "YAML error: cannot decode !!str `error` as a !!float"},
 	{"v: [A,", "YAML error: line 1: did not find expected node content"},
 	{"v:\n- [A,", "YAML error: line 2: did not find expected node content"},
 	{"a: *b\n", "YAML error: Unknown anchor 'b' referenced"},
 	{"a: &a\n  b: *a\n", "YAML error: Anchor 'a' value contains itself"},
 	{"value: -", "YAML error: block sequence entries are not allowed in this context"},
+	{"a: !!binary ==", "YAML error: !!binary value contains invalid base64 data"},
+	{"{[.]}", `YAML error: invalid map key: \[\]interface \{\}\{"\."\}`},
+	{"{{.}}", `YAML error: invalid map key: map\[interface\ \{\}\]interface \{\}\{".":interface \{\}\(nil\)\}`},
 }
 
 func (s *S) TestUnmarshalErrors(c *C) {
 	for _, item := range unmarshalErrorTests {
 		var value interface{}
-		err := goyaml.Unmarshal([]byte(item.data), &value)
+		err := yaml.Unmarshal([]byte(item.data), &value)
 		c.Assert(err, ErrorMatches, item.error, Commentf("Partial unmarshal: %#v", value))
 	}
 }
@@ -421,6 +473,8 @@ var setterTests = []struct {
 	{"_: [1,A]", "!!seq", []interface{}{1, "A"}},
 	{"_: 10", "!!int", 10},
 	{"_: null", "!!null", nil},
+	{`_: BAR!`, "!!str", "BAR!"},
+	{`_: "BAR!"`, "!!str", "BAR!"},
 	{"_: !!foo 'BAR!'", "!!foo", "BAR!"},
 }
 
@@ -442,17 +496,31 @@ func (o *typeWithSetter) SetYAML(tag string, value interface{}) (ok bool) {
 	return true
 }
 
-type typeWithSetterField struct {
+type setterPointerType struct {
 	Field *typeWithSetter "_"
 }
 
-func (s *S) TestUnmarshalWithSetter(c *C) {
+type setterValueType struct {
+	Field typeWithSetter "_"
+}
+
+func (s *S) TestUnmarshalWithPointerSetter(c *C) {
 	for _, item := range setterTests {
-		obj := &typeWithSetterField{}
-		err := goyaml.Unmarshal([]byte(item.data), obj)
+		obj := &setterPointerType{}
+		err := yaml.Unmarshal([]byte(item.data), obj)
 		c.Assert(err, IsNil)
-		c.Assert(obj.Field, NotNil,
-			Commentf("Pointer not initialized (%#v)", item.value))
+		c.Assert(obj.Field, NotNil, Commentf("Pointer not initialized (%#v)", item.value))
+		c.Assert(obj.Field.tag, Equals, item.tag)
+		c.Assert(obj.Field.value, DeepEquals, item.value)
+	}
+}
+
+func (s *S) TestUnmarshalWithValueSetter(c *C) {
+	for _, item := range setterTests {
+		obj := &setterValueType{}
+		err := yaml.Unmarshal([]byte(item.data), obj)
+		c.Assert(err, IsNil)
+		c.Assert(obj.Field, NotNil, Commentf("Pointer not initialized (%#v)", item.value))
 		c.Assert(obj.Field.tag, Equals, item.tag)
 		c.Assert(obj.Field.value, DeepEquals, item.value)
 	}
@@ -460,7 +528,7 @@ func (s *S) TestUnmarshalWithSetter(c *C) {
 
 func (s *S) TestUnmarshalWholeDocumentWithSetter(c *C) {
 	obj := &typeWithSetter{}
-	err := goyaml.Unmarshal([]byte(setterTests[0].data), obj)
+	err := yaml.Unmarshal([]byte(setterTests[0].data), obj)
 	c.Assert(err, IsNil)
 	c.Assert(obj.tag, Equals, setterTests[0].tag)
 	value, ok := obj.value.(map[interface{}]interface{})
@@ -477,8 +545,8 @@ func (s *S) TestUnmarshalWithFalseSetterIgnoresValue(c *C) {
 	}()
 
 	m := map[string]*typeWithSetter{}
-	data := "{abc: 1, def: 2, ghi: 3, jkl: 4}"
-	err := goyaml.Unmarshal([]byte(data), m)
+	data := `{abc: 1, def: 2, ghi: 3, jkl: 4}`
+	err := yaml.Unmarshal([]byte(data), m)
 	c.Assert(err, IsNil)
 	c.Assert(m["abc"], NotNil)
 	c.Assert(m["def"], IsNil)
@@ -487,6 +555,122 @@ func (s *S) TestUnmarshalWithFalseSetterIgnoresValue(c *C) {
 
 	c.Assert(m["abc"].value, Equals, 1)
 	c.Assert(m["ghi"].value, Equals, 3)
+}
+
+// From http://yaml.org/type/merge.html
+var mergeTests = `
+anchors:
+  - &CENTER { "x": 1, "y": 2 }
+  - &LEFT   { "x": 0, "y": 2 }
+  - &BIG    { "r": 10 }
+  - &SMALL  { "r": 1 }
+
+# All the following maps are equal:
+
+plain:
+  # Explicit keys
+  "x": 1
+  "y": 2
+  "r": 10
+  label: center/big
+
+mergeOne:
+  # Merge one map
+  << : *CENTER
+  "r": 10
+  label: center/big
+
+mergeMultiple:
+  # Merge multiple maps
+  << : [ *CENTER, *BIG ]
+  label: center/big
+
+override:
+  # Override
+  << : [ *BIG, *LEFT, *SMALL ]
+  "x": 1
+  label: center/big
+
+shortTag:
+  # Explicit short merge tag
+  !!merge "<<" : [ *CENTER, *BIG ]
+  label: center/big
+
+longTag:
+  # Explicit merge long tag
+  !<tag:yaml.org,2002:merge> "<<" : [ *CENTER, *BIG ]
+  label: center/big
+
+inlineMap:
+  # Inlined map 
+  << : {"x": 1, "y": 2, "r": 10}
+  label: center/big
+
+inlineSequenceMap:
+  # Inlined map in sequence
+  << : [ *CENTER, {"r": 10} ]
+  label: center/big
+`
+
+func (s *S) TestMerge(c *C) {
+	var want = map[interface{}]interface{}{
+		"x":     1,
+		"y":     2,
+		"r":     10,
+		"label": "center/big",
+	}
+
+	var m map[string]interface{}
+	err := yaml.Unmarshal([]byte(mergeTests), &m)
+	c.Assert(err, IsNil)
+	for name, test := range m {
+		if name == "anchors" {
+			continue
+		}
+		c.Assert(test, DeepEquals, want, Commentf("test %q failed", name))
+	}
+}
+
+func (s *S) TestMergeStruct(c *C) {
+	type Data struct {
+		X, Y, R int
+		Label   string
+	}
+	want := Data{1, 2, 10, "center/big"}
+
+	var m map[string]Data
+	err := yaml.Unmarshal([]byte(mergeTests), &m)
+	c.Assert(err, IsNil)
+	for name, test := range m {
+		if name == "anchors" {
+			continue
+		}
+		c.Assert(test, Equals, want, Commentf("test %q failed", name))
+	}
+}
+
+var unmarshalNullTests = []func() interface{}{
+	func() interface{} { var v interface{}; v = "v"; return &v },
+	func() interface{} { var s = "s"; return &s },
+	func() interface{} { var s = "s"; sptr := &s; return &sptr },
+	func() interface{} { var i = 1; return &i },
+	func() interface{} { var i = 1; iptr := &i; return &iptr },
+	func() interface{} { m := map[string]int{"s": 1}; return &m },
+	func() interface{} { m := map[string]int{"s": 1}; return m },
+}
+
+func (s *S) TestUnmarshalNull(c *C) {
+	for _, test := range unmarshalNullTests {
+		item := test()
+		zero := reflect.Zero(reflect.TypeOf(item).Elem()).Interface()
+		err := yaml.Unmarshal([]byte("null"), item)
+		c.Assert(err, IsNil)
+		if reflect.TypeOf(item).Kind() == reflect.Map {
+			c.Assert(reflect.ValueOf(item).Interface(), DeepEquals, reflect.MakeMap(reflect.TypeOf(item)).Interface())
+		} else {
+			c.Assert(reflect.ValueOf(item).Elem().Interface(), DeepEquals, zero)
+		}
+	}
 }
 
 //var data []byte
@@ -502,7 +686,7 @@ func (s *S) TestUnmarshalWithFalseSetterIgnoresValue(c *C) {
 //	var err error
 //	for i := 0; i < c.N; i++ {
 //		var v map[string]interface{}
-//		err = goyaml.Unmarshal(data, &v)
+//		err = yaml.Unmarshal(data, &v)
 //	}
 //	if err != nil {
 //		panic(err)
@@ -511,9 +695,9 @@ func (s *S) TestUnmarshalWithFalseSetterIgnoresValue(c *C) {
 //
 //func (s *S) BenchmarkMarshal(c *C) {
 //	var v map[string]interface{}
-//	goyaml.Unmarshal(data, &v)
+//	yaml.Unmarshal(data, &v)
 //	c.ResetTimer()
 //	for i := 0; i < c.N; i++ {
-//		goyaml.Marshal(&v)
+//		yaml.Marshal(&v)
 //	}
 //}

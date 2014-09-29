@@ -1,12 +1,14 @@
-package goyaml_test
+package yaml_test
 
 import (
 	"fmt"
-	. "launchpad.net/gocheck"
-	"launchpad.net/goyaml"
 	"math"
 	"strconv"
 	"strings"
+	"time"
+
+	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v1"
 )
 
 var marshalIntTest = 123
@@ -16,6 +18,9 @@ var marshalTests = []struct {
 	data  string
 }{
 	{
+		nil,
+		"null\n",
+	}, {
 		&struct{}{},
 		"{}\n",
 	}, {
@@ -86,7 +91,7 @@ var marshalTests = []struct {
 		"v:\n- A\n- B\n",
 	}, {
 		map[string][]string{"v": []string{"A", "B\nC"}},
-		"v:\n- A\n- 'B\n\n  C'\n",
+		"v:\n- A\n- |-\n  B\n  C\n",
 	}, {
 		map[string][]interface{}{"v": []interface{}{"A", 1, map[string][]int{"B": []int{2, 3}}}},
 		"v:\n- A\n- 1\n- B:\n  - 2\n  - 3\n",
@@ -212,11 +217,51 @@ var marshalTests = []struct {
 		}{1, inlineB{2, inlineC{3}}},
 		"a: 1\nb: 2\nc: 3\n",
 	},
+
+	// Duration
+	{
+		map[string]time.Duration{"a": 3 * time.Second},
+		"a: 3s\n",
+	},
+
+	// Issue #24: bug in map merging logic.
+	{
+		map[string]string{"a": "<foo>"},
+		"a: <foo>\n",
+	},
+
+	// Issue #34: marshal unsupported base 60 floats quoted for compatibility
+	// with old YAML 1.1 parsers.
+	{
+		map[string]string{"a": "1:1"},
+		"a: \"1:1\"\n",
+	},
+
+	// Binary data.
+	{
+		map[string]string{"a": "\x00"},
+		"a: \"\\0\"\n",
+	}, {
+		map[string]string{"a": "\x80\x81\x82"},
+		"a: !!binary gIGC\n",
+	}, {
+		map[string]string{"a": strings.Repeat("\x90", 54)},
+		"a: !!binary |\n  " + strings.Repeat("kJCQ", 17) + "kJ\n  CQ\n",
+	}, {
+		map[string]interface{}{"a": typeWithGetter{"!!str", "\x80\x81\x82"}},
+		"a: !!binary gIGC\n",
+	},
+
+	// Escaping of tags.
+	{
+		map[string]interface{}{"a": typeWithGetter{"foo!bar", 1}},
+		"a: !<foo%21bar> 1\n",
+	},
 }
 
 func (s *S) TestMarshal(c *C) {
 	for _, item := range marshalTests {
-		data, err := goyaml.Marshal(item.value)
+		data, err := yaml.Marshal(item.value)
 		c.Assert(err, IsNil)
 		c.Assert(string(data), Equals, item.data)
 	}
@@ -225,20 +270,29 @@ func (s *S) TestMarshal(c *C) {
 var marshalErrorTests = []struct {
 	value interface{}
 	error string
-}{
-	{
-		&struct {
-			B       int
-			inlineB ",inline"
-		}{1, inlineB{2, inlineC{3}}},
-		`Duplicated key 'b' in struct struct \{ B int; .*`,
-	},
-}
+	panic string
+}{{
+	value: &struct {
+		B       int
+		inlineB ",inline"
+	}{1, inlineB{2, inlineC{3}}},
+	panic: `Duplicated key 'b' in struct struct \{ B int; .*`,
+}, {
+	value: typeWithGetter{"!!binary", "\x80"},
+	error: "YAML error: explicitly tagged !!binary data must be base64-encoded",
+}, {
+	value: typeWithGetter{"!!float", "\x80"},
+	error: `YAML error: cannot marshal invalid UTF-8 data as !!float`,
+}}
 
 func (s *S) TestMarshalErrors(c *C) {
 	for _, item := range marshalErrorTests {
-		_, err := goyaml.Marshal(item.value)
-		c.Assert(err, ErrorMatches, item.error)
+		if item.panic != "" {
+			c.Assert(func() { yaml.Marshal(item.value) }, PanicMatches, item.panic)
+		} else {
+			_, err := yaml.Marshal(item.value)
+			c.Assert(err, ErrorMatches, item.error)
+		}
 	}
 }
 
@@ -269,12 +323,12 @@ func (s *S) TestMarshalTypeCache(c *C) {
 	var err error
 	func() {
 		type T struct{ A int }
-		data, err = goyaml.Marshal(&T{})
+		data, err = yaml.Marshal(&T{})
 		c.Assert(err, IsNil)
 	}()
 	func() {
 		type T struct{ B int }
-		data, err = goyaml.Marshal(&T{})
+		data, err = yaml.Marshal(&T{})
 		c.Assert(err, IsNil)
 	}()
 	c.Assert(string(data), Equals, "b: 0\n")
@@ -298,7 +352,7 @@ func (s *S) TestMashalWithGetter(c *C) {
 		obj := &typeWithGetterField{}
 		obj.Field.tag = item.tag
 		obj.Field.value = item.value
-		data, err := goyaml.Marshal(obj)
+		data, err := yaml.Marshal(obj)
 		c.Assert(err, IsNil)
 		c.Assert(string(data), Equals, string(item.data))
 	}
@@ -308,7 +362,7 @@ func (s *S) TestUnmarshalWholeDocumentWithGetter(c *C) {
 	obj := &typeWithGetter{}
 	obj.tag = ""
 	obj.value = map[string]string{"hello": "world!"}
-	data, err := goyaml.Marshal(obj)
+	data, err := yaml.Marshal(obj)
 	c.Assert(err, IsNil)
 	c.Assert(string(data), Equals, "hello: world!\n")
 }
@@ -356,7 +410,7 @@ func (s *S) TestSortedOutput(c *C) {
 	for _, k := range order {
 		m[k] = 1
 	}
-	data, err := goyaml.Marshal(m)
+	data, err := yaml.Marshal(m)
 	c.Assert(err, IsNil)
 	out := "\n" + string(data)
 	last := 0
