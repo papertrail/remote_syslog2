@@ -268,6 +268,24 @@ up and then apply this new value permanently by adding the following to
 
     fs.inotify.max_user_instances = VALUE
 
+Another error that can occur when monitoring a large number of files is:
+
+    FATAL -- Error watching /path/here : no space left on device
+
+This can be solved by determing the maximum number of user watches that can be
+created using:
+
+    cat /proc/sys/fs/inotify/max_user_watches
+
+and then increasing them using:
+
+    echo VALUE >> /proc/sys/fs/inotify/max_user_watches
+
+Once again, confirm that remote_syslog starts and then apply this value permanently
+by adding the following to `/etc/sysctl.conf:`:
+
+    fs.inotify.max_user_watches = VALUE
+
 ## Credits
 
 * [Paul Morton](https://twitter.com/mortonpe)
