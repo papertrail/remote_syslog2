@@ -272,12 +272,12 @@ Another error that can occur when monitoring a large number of files is:
 
     FATAL -- Error watching /path/here : no space left on device
 
-This can be solved by determing the maximum number of user watches that can be
+To solve this, determine the maximum number of user watches that can be
 created using:
 
     cat /proc/sys/fs/inotify/max_user_watches
 
-and then increasing them using:
+and then increase them using:
 
     echo VALUE >> /proc/sys/fs/inotify/max_user_watches
 
