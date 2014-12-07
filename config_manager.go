@@ -52,6 +52,7 @@ type ConfigManager struct {
 		NoDaemonize     bool
 		Severity        string
 		Facility        string
+		Poll            bool
 	}
 }
 
@@ -164,6 +165,7 @@ func (cm *ConfigManager) parseFlags() {
 	// --strip-color
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
+	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
 	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
@@ -275,6 +277,10 @@ func (cm *ConfigManager) Facility() syslog.Priority {
 		os.Exit(1)
 	}
 	return f
+}
+
+func (cm *ConfigManager) Poll() bool {
+	return cm.Flags.Poll
 }
 
 func (cm *ConfigManager) Files() []string {
