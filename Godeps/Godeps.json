@@ -26,9 +26,10 @@
 			"ImportPath": "github.com/ogier/pflag",
 			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
 		},
-		{
-			"ImportPath": "gopkg.in/tomb.v1",
-			"Rev": "c131134a1947e9afd9cecfe11f4c6dff0732ae58"
+	  {
+      "ImportPath": "launchpad.net/tomb",
+      "Comment": "17",
+      "Rev": "gustavo@niemeyer.net-20130531003818-70ikdgklbxopn8x4"
 		},
 		{
 			"ImportPath": "gopkg.in/v1/yaml",
