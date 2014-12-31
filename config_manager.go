@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -21,8 +22,13 @@ const (
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
+type LogFile struct {
+	Path        string
+	Application string
+}
+
 type ConfigFile struct {
-	Files       []string
+	Files       []LogFile
 	Destination struct {
 		Host     string `yaml:"host"`
 		Port     int    `yaml:"port"`
@@ -37,7 +43,7 @@ type ConfigFile struct {
 
 type ConfigManager struct {
 	Config    ConfigFile
-	FlagFiles []string
+	FlagFiles []LogFile
 	Flags     struct {
 		Hostname        string
 		DestHost        string
@@ -172,7 +178,12 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	pflag.Parse()
-	cm.FlagFiles = pflag.Args()
+	for _, arg := range pflag.Args() {
+		log := strings.Split(arg, ":")
+		if len(log) == 2 {
+			cm.FlagFiles = append(cm.FlagFiles, LogFile{Application: log[0], Path: log[1]})
+		}
+	}
 }
 
 func (cm *ConfigManager) readConfig() error {
@@ -283,7 +294,7 @@ func (cm *ConfigManager) Poll() bool {
 	return cm.Flags.Poll
 }
 
-func (cm *ConfigManager) Files() []string {
+func (cm *ConfigManager) Files() []LogFile {
 	return append(cm.FlagFiles, cm.Config.Files...)
 }
 
