@@ -6,3 +6,5 @@ destination:
   protocol: tls
 exclude_patterns:
   - don't log on me
+include_patterns:
+  - include me

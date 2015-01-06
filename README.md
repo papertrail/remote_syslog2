@@ -218,6 +218,10 @@ exclude_patterns with an array or regexes:
      - \d+ things
 
 
+### Including lines matching a pattern
+
+The inverse of excluding lines matching a pattern
+
 ### Multiple instances
 
 Run multiple instances to specify unique syslog hostnames.
