@@ -33,6 +33,7 @@ type ConfigFile struct {
 	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
 	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
+	IncludePatterns *RegexCollection `yaml:"include_patterns"`
 }
 
 type ConfigManager struct {
@@ -138,6 +139,7 @@ func NewConfigManager() ConfigManager {
 func (cm *ConfigManager) Initialize() error {
 	cm.Config.ExcludeFiles = &RegexCollection{}
 	cm.Config.ExcludePatterns = &RegexCollection{}
+	cm.Config.IncludePatterns = &RegexCollection{}
 	cm.parseFlags()
 
 	err := cm.readConfig()
@@ -346,4 +348,8 @@ func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
 
 func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 	return *cm.Config.ExcludePatterns
+}
+
+func (cm *ConfigManager) IncludePatterns() []*regexp.Regexp{
+	return *cm.Config.IncludePatterns
 }
