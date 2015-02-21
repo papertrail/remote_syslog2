@@ -1,0 +1,9 @@
+/sbin/chkconfig --add remote_syslog
+
+if [ "$1" -gt "1" ]; then
+  # Upgrade
+  /etc/init.d/remote_syslog restart
+fi
+
+exit 0
+
