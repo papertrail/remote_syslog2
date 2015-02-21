@@ -101,17 +101,17 @@ $(BUILD_PAIRS): build
 		  -C tmp \
 		  -t deb \
 		  -n $(PACKAGE_NAME) \
-		-v $(PACKAGE_VERSION) \
-		--vendor $(PACKAGE_VENDOR) \
-		--license $(PACKAGE_LICENSE) \
-		-a $(ARCH) \
-		-m $(PACKAGE_CONTACT) \
-		--description $(PACKAGE_DESCRIPTION) \
-		--url $(PACKAGE_URL) \
-		--before-remove ../packaging/linux/deb/prerm \
-		--after-install ../packaging/linux/deb/postinst \
-		--config-files etc/log_files.yml \
-		--config-files etc/init.d/remote_syslog usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog && \
+		  -v $(PACKAGE_VERSION) \
+		  --vendor $(PACKAGE_VENDOR) \
+		  --license $(PACKAGE_LICENSE) \
+		  -a $(ARCH) \
+		  -m $(PACKAGE_CONTACT) \
+		  --description $(PACKAGE_DESCRIPTION) \
+		  --url $(PACKAGE_URL) \
+		  --before-remove ../packaging/linux/deb/prerm \
+		  --after-install ../packaging/linux/deb/postinst \
+		  --config-files etc/log_files.yml \
+		  --config-files etc/init.d/remote_syslog usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog && \
 		fpm \
 		  -s dir \
 		  -C tmp \
