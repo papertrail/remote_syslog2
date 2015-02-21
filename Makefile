@@ -5,10 +5,10 @@ include packaging/Makefile.packaging
 
 GODEP=GOPATH="`godep path`:$(GOPATH)"
 
-#X86_PLATFORMS := windows linux
-#X64_PLATFORMS := windows linux darwin
-X64_PLATFORMS := linux
-#BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/386 )
+X86_PLATFORMS := windows linux
+X64_PLATFORMS := windows linux darwin
+
+BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/386 )
 BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/amd64 )
 
 BUILD_DOCS := README.md LICENSE example_config.yml
@@ -21,7 +21,7 @@ build: depend clean test
 	@echo
 	@echo "\033[32mBuilding ----> \033[m"
 	$(GODEP) gox -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/{{.Arch}}/remote_syslog/remote_syslog"
-#	$(GODEP) gox -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/{{.Arch}}/remote_syslog/remote_syslog"
+	$(GODEP) gox -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/{{.Arch}}/remote_syslog/remote_syslog"
 
 
 clean:
@@ -34,7 +34,7 @@ clean:
 test:
 	@echo
 	@echo "\033[32mTesting ----> \033[m"
-#	$(GODEP) go test ./...
+	$(GODEP) go test ./...
 
 
 depend:
