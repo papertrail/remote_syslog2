@@ -70,9 +70,9 @@ endif
 	}
 
 	gem list | grep fpm >/dev/null 2>&1 || { \
-		echo "\033[1;33mfpm is not installed. See https://github.com/jordansissel/fpm\033[m"; \
-		echo "$$ gem install fpm"; \
-		exit 1; \
+	  echo "\033[1;33mfpm is not installed. See https://github.com/jordansissel/fpm\033[m"; \
+	  echo "$$ gem install fpm"; \
+	  exit 1; \
 	}
 
 	type rpmbuild >/dev/null 2>&1 || { \
@@ -96,37 +96,39 @@ $(BUILD_PAIRS): build
 		cp -f packaging/linux/remote_syslog.initd pkg/tmp/etc/init.d/remote_syslog;\
 		cp -f build/$@/remote_syslog/remote_syslog pkg/tmp/usr/local/bin;\
 		(cd pkg && \
-		fpm -s dir \
-				-C tmp \
-				-t deb \
-				-n $(PACKAGE_NAME) \
-				-v $(PACKAGE_VERSION) \
-				--vendor $(PACKAGE_VENDOR) \
-				--license $(PACKAGE_LICENSE) \
-				-a $(ARCH) \
-				-m $(PACKAGE_CONTACT) \
-				--description $(PACKAGE_DESCRIPTION) \
-				--url $(PACKAGE_URL) \
-				--before-remove ../packaging/linux/deb/prerm \
-				--after-install ../packaging/linux/deb/postinst \
-				--config-files etc/log_files.yml \
-				--config-files etc/init.d/remote_syslog usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog && \
-		fpm -s dir \
-				-C tmp \
-				-t rpm \
-				-n $(PACKAGE_NAME) \
-				-v $(PACKAGE_VERSION) \
-				--vendor $(PACKAGE_VENDOR) \
-				--license $(PACKAGE_LICENSE) \
-				-a $(ARCH) \
-				-m $(PACKAGE_CONTACT) \
-				--description $(PACKAGE_DESCRIPTION) \
-				--url $(PACKAGE_URL) \
-				--before-remove ../packaging/linux/rpm/preun \
-				--after-install ../packaging/linux/rpm/post \
-				--config-files etc/log_files.yml \
-				--config-files etc/init.d/remote_syslog \
-				--rpm-os linux usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog );\
+		fpm \
+		  -s dir \
+		  -C tmp \
+		  -t deb \
+		  -n $(PACKAGE_NAME) \
+		-v $(PACKAGE_VERSION) \
+		--vendor $(PACKAGE_VENDOR) \
+		--license $(PACKAGE_LICENSE) \
+		-a $(ARCH) \
+		-m $(PACKAGE_CONTACT) \
+		--description $(PACKAGE_DESCRIPTION) \
+		--url $(PACKAGE_URL) \
+		--before-remove ../packaging/linux/deb/prerm \
+		--after-install ../packaging/linux/deb/postinst \
+		--config-files etc/log_files.yml \
+		--config-files etc/init.d/remote_syslog usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog && \
+		fpm \
+		  -s dir \
+		  -C tmp \
+		  -t rpm \
+		  -n $(PACKAGE_NAME) \
+		  -v $(PACKAGE_VERSION) \
+		  --vendor $(PACKAGE_VENDOR) \
+		  --license $(PACKAGE_LICENSE) \
+		  -a $(ARCH) \
+		  -m $(PACKAGE_CONTACT) \
+		  --description $(PACKAGE_DESCRIPTION) \
+		  --url $(PACKAGE_URL) \
+		  --before-remove ../packaging/linux/rpm/preun \
+		  --after-install ../packaging/linux/rpm/post \
+		  --config-files etc/log_files.yml \
+		  --config-files etc/init.d/remote_syslog \
+		  --rpm-os linux usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog );\
 		rm -R -f pkg/tmp;\
 	fi
 
