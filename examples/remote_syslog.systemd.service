@@ -1,0 +1,14 @@
+[Unit]
+Description=remote_syslog2
+Documentation=https://github.com/papertrail/remote_syslog2
+After=rsyslog.service
+
+[Service]
+ExecStartPre=/usr/bin/test -e /etc/log_files.yml
+ExecStart=/usr/local/bin/remote_syslog -D
+Restart=always
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
