@@ -13,7 +13,7 @@
     <string>root</string>
     <key>ProgramArguments</key>
     <array>
-      <string>remote_syslog</string>
+      <string>/usr/local/bin/remote_syslog</string>
       <string>-D</string>
     </array>
   </dict>
