@@ -90,7 +90,7 @@ exists, and send with facility local0 to `a.example.com:514`:
 
 ## Auto-starting at boot
 
-Sample init files can be found [here](https://github.com/papertrail/remote_syslog2/blob/master/examples/). You may be able to:
+Sample init files can be found [in the examples directory](examples/). You may be able to:
 
     $ cp examples/remote_syslog.init.d /etc/init.d/remote_syslog
     $ chmod 755 /etc/init.d/remote_syslog
@@ -105,7 +105,8 @@ or by creating a link manually:
 
 remote_syslog will daemonize by default.
 
-Init files: [remote_syslog.init.d](https://github.com/papertrail/remote_syslog2/blob/master/examples/remote_syslog.init.d) (init.d), OS X [launchd](https://github.com/papertrail/remote_syslog2/blob/master/examples/com.papertrailapp.remote_syslog.plist), [supervisor](https://github.com/papertrail/remote_syslog2/blob/master/examples/remote_syslog.supervisor.conf), Ubuntu [upstart](https://github.com/papertrail/remote_syslog2/blob/master/examples/remote_syslog.upstart.conf)
+Additional information about init files (`init.d`, `supervisor`, `systemd` and `upstart`) are 
+available [in the examples directory](examples/).
 
 
 ## Sending messages securely ##
