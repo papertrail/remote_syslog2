@@ -9,6 +9,7 @@ package syslog
 import (
 	"crypto/tls"
 	"crypto/x509"
+	_ "crypto/sha512"
 	"fmt"
 	"io"
 	"net"
