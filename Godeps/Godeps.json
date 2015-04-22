@@ -1,40 +1,39 @@
 {
 	"ImportPath": "github.com/papertrail/remote_syslog2",
-	"GoVersion": "go1.2.1",
+	"GoVersion": "go1.3.2",
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
-			"Rev": "c5b73d348500e127fc50788ee93ef5a6f740cc96"
+			"Rev": "fd3ba4e64ca930fe21edc4c8a8bd1a075ef7f4ac"
 		},
 		{
 			"ImportPath": "github.com/VividCortex/godaemon",
-			"Rev": "2fdf3f9fa715a998e834f09e07a8070d9046bcfd"
+			"Rev": "560bd39278f31c0ec39d52beadad9558dcb08ba2"
 		},
 		{
 			"ImportPath": "github.com/howbazaar/loggo",
-			"Rev": "384be41088235af6d26ba66786fd23c45b2d5311"
+			"Rev": "3a7abfe82586cb1295663c2676e86e086cdc7340"
 		},
 		{
 			"ImportPath": "github.com/howeyc/fsnotify",
-			"Rev": "7f0625dbb54fef2cfba674bc0dfc6c37d34bad27"
+			"Comment": "v0.9.0-11-g6b1ef89",
+			"Rev": "6b1ef893dc11e0447abda6da20a5203481878dda"
 		},
 		{
 			"ImportPath": "github.com/leonsodhi/lockfile",
-			"Rev": "c63b2cdcd236da66e05a8b9bd151ea8ed082d0db"
+			"Rev": "913011ab66dd782d293375e7318bc2037bde89ce"
 		},
 		{
 			"ImportPath": "github.com/ogier/pflag",
-			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
+			"Rev": "e4f7d00f344b0954fa3791a8527d10ba7334eceb"
 		},
 		{
-			"ImportPath": "launchpad.net/goyaml",
-			"Comment": "50",
-			"Rev": "gustavo@niemeyer.net-20131114120802-abe042syx64z2m7s"
+			"ImportPath": "gopkg.in/tomb.v1",
+			"Rev": "c131134a1947e9afd9cecfe11f4c6dff0732ae58"
 		},
 		{
-			"ImportPath": "launchpad.net/tomb",
-			"Comment": "17",
-			"Rev": "gustavo@niemeyer.net-20130531003818-70ikdgklbxopn8x4"
+			"ImportPath": "gopkg.in/v1/yaml",
+			"Rev": "9f9df34309c04878acc86042b16630b0f696e1de"
 		}
 	]
 }
