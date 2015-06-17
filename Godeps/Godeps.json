@@ -4,7 +4,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
-			"Rev": "c5b73d348500e127fc50788ee93ef5a6f740cc96"
+			"Rev": "c86531131426fb939fe8627ffa57a3c649f04cd4"
 		},
 		{
 			"ImportPath": "github.com/VividCortex/godaemon",

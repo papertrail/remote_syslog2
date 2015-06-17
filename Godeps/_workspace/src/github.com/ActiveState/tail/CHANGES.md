@@ -1,3 +1,26 @@
+# June, 2015
+
+* Don't return partial lines (PR #40)
+
+# July, 2014
+
+* Fix tail for Windows (PR #36)
+
+# May, 2014
+
+* Improved rate limiting using leaky bucket (PR #29)
+* Fix odd line splitting (PR #30)
+
+# Apr, 2014
+
+* LimitRate now discards read buffer (PR #28)
+* allow reading of longer lines if MaxLineSize is unset (PR #24)
+* updated deps.json to latest fsnotify (441bbc86b1)
+
+# Feb, 2014
+
+* added `Config.Logger` to suppress library logging
+
 # Nov, 2013
 
 * add Cleanup to remove leaky inotify watches (PR #20)
