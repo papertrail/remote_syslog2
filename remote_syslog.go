@@ -53,6 +53,11 @@ func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logge
 // Tails files speficied in the globs and re-evaluates the globs
 // at the specified interval
 func tailFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, interval RefreshInterval, logger *syslog.Logger, severity syslog.Priority, facility syslog.Priority, poll bool) {
+	if len(globs) == 0 {
+		log.Criticalf("Supplied no files to watch")
+		os.Exit(1)
+	}
+
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", interval.Duration)
 	logMissingFiles := true

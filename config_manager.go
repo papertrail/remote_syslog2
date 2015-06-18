@@ -35,6 +35,16 @@ type ConfigFile struct {
 	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
 }
 
+func (cf ConfigFile) printValidationWarnings() {
+	if len(cf.Files) == 0 {
+		log.Warningf("Configuration file contains no files to watch")
+	}
+	// Warn, that port is not set, only if host is specified
+	if cf.Destination.Host != "" && cf.Destination.Port == 0 {
+		log.Warningf("Destination port is not specified in configuration file")
+	}
+}
+
 type ConfigManager struct {
 	Config    ConfigFile
 	FlagFiles []string
@@ -199,6 +209,8 @@ func (cm *ConfigManager) loadConfigFile() error {
 	if err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
+	cm.Config.printValidationWarnings()
+
 	return nil
 }
 
