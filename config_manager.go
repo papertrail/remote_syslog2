@@ -21,6 +21,8 @@ const (
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
+var defaultConfigNotExists = fmt.Errorf("Default configuration file '%s' does not exist", DefaultConfigFile)
+
 type ConfigFile struct {
 	Files       []string
 	Destination struct {
@@ -37,11 +39,11 @@ type ConfigFile struct {
 
 func (cf ConfigFile) printValidationWarnings() {
 	if len(cf.Files) == 0 {
-		log.Warningf("Configuration file contains no files to watch")
+		log.Warningf("Validation: configuration file contains no files to watch")
 	}
 	// Warn, that port is not set, only if host is specified
 	if cf.Destination.Host != "" && cf.Destination.Port == 0 {
-		log.Warningf("Destination port is not specified in configuration file")
+		log.Warningf("Validation: destination port is not specified in configuration file")
 	}
 }
 
@@ -189,7 +191,12 @@ func (cm *ConfigManager) readConfig() error {
 	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
 	err := cm.loadConfigFile()
 	if err != nil {
-		log.Errorf("%s", err)
+		if err == defaultConfigNotExists {
+			log.Warningf(err.Error())
+			err = nil
+		} else {
+			log.Errorf(err.Error())
+		}
 		return err
 	}
 	return nil
@@ -199,7 +206,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
 	// don't error if the default config file isn't found
 	if os.IsNotExist(err) && cm.Flags.ConfigFile == DefaultConfigFile {
-		return nil
+		return defaultConfigNotExists
 	}
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
@@ -209,7 +216,6 @@ func (cm *ConfigManager) loadConfigFile() error {
 	if err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
-	cm.Config.printValidationWarnings()
 
 	return nil
 }
@@ -364,4 +370,13 @@ func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
 
 func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 	return *cm.Config.ExcludePatterns
+}
+
+func (cm *ConfigManager) printValidationWarnings() {
+	cm.Config.printValidationWarnings()
+	for _, fileToWatch := range cm.Files() {
+		if _, err := os.Stat(fileToWatch); os.IsNotExist(err) {
+			log.Warningf("Validation: file does not exist: %s", fileToWatch)
+		}
+	}
 }

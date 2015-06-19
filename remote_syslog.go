@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ActiveState/tail"
+	"github.com/VividCortex/godaemon"
 	"github.com/howbazaar/loggo"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
@@ -21,7 +22,7 @@ var log = loggo.GetLogger("")
 func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, severity syslog.Priority, facility syslog.Priority, poll bool) {
 	defer wr.Remove(file)
 	wr.Add(file)
-  tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, os.SEEK_END}}
+	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, os.SEEK_END}}
 
 	t, err := tail.TailFile(file, tailConfig)
 
@@ -108,6 +109,9 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 
 func main() {
 	cm := NewConfigManager()
+	if !cm.Daemonize() || godaemon.Stage() == godaemon.StageParent {
+		cm.printValidationWarnings()
+	}
 
 	if cm.Daemonize() {
 		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
