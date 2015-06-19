@@ -21,7 +21,7 @@ var log = loggo.GetLogger("")
 func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, severity syslog.Priority, facility syslog.Priority, poll bool) {
 	defer wr.Remove(file)
 	wr.Add(file)
-  tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, os.SEEK_END}}
+	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, os.SEEK_END}}
 
 	t, err := tail.TailFile(file, tailConfig)
 

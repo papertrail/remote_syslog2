@@ -4,7 +4,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
-			"Rev": "c5b73d348500e127fc50788ee93ef5a6f740cc96"
+			"Rev": "c86531131426fb939fe8627ffa57a3c649f04cd4"
 		},
 		{
 			"ImportPath": "github.com/VividCortex/godaemon",
@@ -27,14 +27,13 @@
 			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
 		},
 		{
+			"ImportPath": "gopkg.in/tomb.v1",
+			"Rev": "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
+		},
+		{
 			"ImportPath": "launchpad.net/goyaml",
 			"Comment": "50",
 			"Rev": "gustavo@niemeyer.net-20131114120802-abe042syx64z2m7s"
-		},
-		{
-			"ImportPath": "launchpad.net/tomb",
-			"Comment": "17",
-			"Rev": "gustavo@niemeyer.net-20130531003818-70ikdgklbxopn8x4"
 		}
 	]
 }
