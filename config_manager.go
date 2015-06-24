@@ -21,7 +21,7 @@ const (
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
-var defaultConfigNotExists = fmt.Errorf("Default configuration file '%s' does not exist", DefaultConfigFile)
+var defaultConfigDoesNotExist = fmt.Errorf("Default configuration file '%s' does not exist", DefaultConfigFile)
 
 type ConfigFile struct {
 	Files       []string
@@ -191,7 +191,7 @@ func (cm *ConfigManager) readConfig() error {
 	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
 	err := cm.loadConfigFile()
 	if err != nil {
-		if err == defaultConfigNotExists {
+		if err == defaultConfigDoesNotExist {
 			log.Warningf(err.Error())
 			err = nil
 		} else {
@@ -206,7 +206,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
 	// don't error if the default config file isn't found
 	if os.IsNotExist(err) && cm.Flags.ConfigFile == DefaultConfigFile {
-		return defaultConfigNotExists
+		return defaultConfigDoesNotExist
 	}
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
