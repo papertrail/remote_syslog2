@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "$1" = "failed-upgrade" ]; then
+  exit 1
+fi
+
+if [ "$1" = "remove" ]; then
+  /etc/init.d/remote_syslog stop
+  update-rc.d -f remote_syslog remove >/dev/null
+fi
+
