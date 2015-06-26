@@ -3,42 +3,43 @@ package main
 import (
 	"regexp"
 	"testing"
+
+	. "gopkg.in/check.v1"
 )
 
-func TestGetHostnameFromConfig(t *testing.T) {
+func Test(t *testing.T) { TestingT(t) }
 
-	cm := ConfigManager{}
-	cm.Flags.ConfigFile = "test/config_with_host.yaml"
-	cm.loadConfigFile()
-
-	expectedHostname := "test-host-from-config"
-	if cm.Hostname() != expectedHostname {
-		t.Errorf("Bad hostname, expected %s but got %s", expectedHostname, cm.Hostname())
-	}
+type SyslogSuite struct {
+	cm ConfigManager
 }
 
-func TestGetHostnameFromCommandline(t *testing.T) {
-	cm := ConfigManager{}
-	cm.Flags.ConfigFile = "test/config_with_host.yaml"
-	cm.loadConfigFile()
+var _ = Suite(&SyslogSuite{})
 
-	cm.Flags.Hostname = "test-host-from-commandline"
-
-	if cm.Hostname() != cm.Flags.Hostname {
-		t.Errorf("Bad hostname, expected %s but got %s", cm.Flags.Hostname, cm.Hostname())
-	}
+func (s *SyslogSuite) SetUpSuite(c *C) {
+	s.cm = NewConfigManager()
+	s.cm.Flags.ConfigFile = "test/config_with_host.yaml"
+	c.Assert(s.cm.loadConfigFile(), IsNil)
 }
 
-func TestFilters(t *testing.T) {
-	expressions := []*regexp.Regexp{}
-	expressions = append(expressions, regexp.MustCompile("\\d+"))
+func (s *SyslogSuite) TearDownSuite(c *C) {
+}
+
+func (s *SyslogSuite) SetUpTest(c *C) {
+}
+
+func (s *SyslogSuite) TearDownTest(c *C) {
+}
+
+func (s *SyslogSuite) TestConfig(c *C) {
+	c.Assert(s.cm.Hostname(), Equals, "test-host-from-config")
+	s.cm.Flags.Hostname = "test-host-from-commandline"
+	c.Assert(s.cm.Hostname(), Equals, s.cm.Flags.Hostname)
+}
+
+func (s *SyslogSuite) TestFilters(c *C) {
+	expressions := []*regexp.Regexp{regexp.MustCompile("\\d+")}
 	message := "test message"
-	if matchExps(message, expressions) {
-		t.Errorf("Did not expect \"%s\" to match \"%s\"", message, expressions[0])
-	}
-
+	c.Assert(matchExps(message, expressions), Not(Equals), true)
 	message = "0000"
-	if !matchExps(message, expressions) {
-		t.Errorf("Expected \"%s\" to match \"%s\"", message, expressions[0])
-	}
+	c.Assert(matchExps(message, expressions), Equals, true)
 }
