@@ -29,7 +29,7 @@ func (self *RefreshInterval) Set(v interface{}) error {
 		}
 		ii := RefreshInterval(d)
 		if ii < MinimumRefreshInterval {
-			return fmt.Errorf("Refresh interval must be greater than %s", MinimumRefreshInterval)
+			return fmt.Errorf("Refresh interval must be equal orgreater than or equal to %s", MinimumRefreshInterval)
 		}
 		*self = ii
 		return nil
