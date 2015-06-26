@@ -28,11 +28,10 @@ type ConfigFile struct {
 		Port     int    `yaml:"port"`
 		Protocol string `yaml:"protocol"`
 	}
-	Hostname string `yaml:"hostname"`
-	//SetYAML is only called on pointers
-	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
-	ExcludeFiles    RegexCollection  `yaml:"exclude_files"`
-	ExcludePatterns RegexCollection  `yaml:"exclude_patterns"`
+	Hostname        string          `yaml:"hostname"`
+	RefreshInterval RefreshInterval `yaml:"new_file_check_interval"`
+	ExcludeFiles    RegexCollection `yaml:"exclude_files"`
+	ExcludePatterns RegexCollection `yaml:"exclude_patterns"`
 }
 
 type ConfigManager struct {
@@ -56,74 +55,6 @@ type ConfigManager struct {
 	}
 }
 
-type RefreshInterval struct {
-	Duration time.Duration
-}
-
-func (r *RefreshInterval) String() string {
-	return fmt.Sprint(*r)
-}
-
-func (r *RefreshInterval) Set(value string) error {
-	d, err := time.ParseDuration(value)
-
-	if err != nil {
-		return err
-	}
-
-	if d < MinimumRefreshInterval {
-		return fmt.Errorf("refresh interval must be greater than %s", MinimumRefreshInterval)
-	}
-	r.Duration = d
-	return nil
-}
-
-func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
-	err := r.Set(value.(string))
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-type RegexCollection []*regexp.Regexp
-
-func (r *RegexCollection) Set(value string) error {
-	exp, err := regexp.Compile(value)
-	if err != nil {
-		return err
-	}
-	*r = append(*r, exp)
-	return nil
-}
-
-func (r *RegexCollection) String() string {
-	return fmt.Sprint(*r)
-}
-
-func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
-	items, ok := value.([]interface{})
-
-	if !ok {
-		return false
-	}
-
-	for _, item := range items {
-		s, ok := item.(string)
-
-		if !ok {
-			return false
-		}
-
-		err := r.Set(s)
-		if err != nil {
-			panic(fmt.Sprintf("Failed to compile regex expression \"%s\"", s))
-		}
-	}
-
-	return true
-}
-
 func NewConfigManager() (*ConfigManager, error) {
 	cm := &ConfigManager{
 		Config: ConfigFile{
@@ -139,7 +70,7 @@ func NewConfigManager() (*ConfigManager, error) {
 	return cm, nil
 }
 
-func (cm *ConfigManager) parseFlags() {
+func (cm *ConfigManager) parseFlags() error {
 	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", DefaultConfigFile, "Path to config")
 	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
 	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
@@ -157,13 +88,18 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
+	var s string
+	pflag.StringVar(&s, "new-file-check-interval", "", "How often to check for new files")
+	if err := cm.Flags.RefreshInterval.Set(s); err != nil {
+		return err
+	}
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	pflag.Parse()
 	cm.FlagFiles = pflag.Args()
+	return nil
 }
 
 func (cm *ConfigManager) readConfig() error {
@@ -321,15 +257,10 @@ func (cm *ConfigManager) LogLevels() string {
 }
 
 func (cm *ConfigManager) RefreshInterval() RefreshInterval {
-	switch {
-	case cm.Config.RefreshInterval != nil && cm.Flags.RefreshInterval.Duration != 0:
-		return cm.Flags.RefreshInterval
-	case cm.Config.RefreshInterval != nil:
-		return *cm.Config.RefreshInterval
-	case cm.Flags.RefreshInterval.Duration != 0:
+	if cm.Flags.RefreshInterval != 0 {
 		return cm.Flags.RefreshInterval
 	}
-	return RefreshInterval{Duration: MinimumRefreshInterval}
+	return MinimumRefreshInterval
 }
 
 func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
