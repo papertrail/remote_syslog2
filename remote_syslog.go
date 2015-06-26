@@ -99,19 +99,6 @@ func tailOne(
 	log.Errorf("Tail worker executed abnormally")
 }
 
-// Tails files speficied in the globs and re-evaluates the globs
-// at the specified interval
-func tailFiles(cm *ConfigManager, logger *syslog.Logger) {
-	wr := NewWorkerRegistry()
-	log.Debugf("Evaluating globs every %s", cm.RefreshInterval())
-	logMissingFiles := true
-	for {
-		globFiles(cm, logger, &wr, logMissingFiles)
-		time.Sleep(time.Duration(cm.RefreshInterval()))
-		logMissingFiles = false
-	}
-}
-
 //
 func globFiles(
 	cm *ConfigManager,
