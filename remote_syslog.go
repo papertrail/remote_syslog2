@@ -111,7 +111,9 @@ func globFiles(
 		files, err := filepath.Glob(utils.ResolvePath(glob))
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob, err)
-		} else if files == nil && logMissingFiles {
+			return
+		}
+		if files == nil && logMissingFiles {
 			log.Errorf("Cannot forward %s, it may not exist", glob)
 		}
 		for _, file := range files {
