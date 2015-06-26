@@ -10,13 +10,15 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type SyslogSuite struct {
-	cm ConfigManager
+	cm *ConfigManager
 }
 
 var _ = Suite(&SyslogSuite{})
 
 func (s *SyslogSuite) SetUpSuite(c *C) {
-	s.cm = NewConfigManager()
+	cm, err := NewConfigManager()
+	c.Assert(err, IsNil)
+	s.cm = cm
 	s.cm.Flags.ConfigFile = "test/config_with_host.yaml"
 	c.Assert(s.cm.loadConfigFile(), IsNil)
 }

@@ -132,12 +132,11 @@ func NewConfigManager() (*ConfigManager, error) {
 		},
 	}
 	cm.parseFlags()
-
-	err := cm.readConfig()
-	if err != nil {
-		return err
+	if err := cm.readConfig(); err != nil {
+		log.Errorf("Error reading config file: %v", err)
+		return nil, err
 	}
-	return nil
+	return cm, nil
 }
 
 func (cm *ConfigManager) parseFlags() {
@@ -169,12 +168,7 @@ func (cm *ConfigManager) parseFlags() {
 
 func (cm *ConfigManager) readConfig() error {
 	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
-	err := cm.loadConfigFile()
-	if err != nil {
-		log.Errorf("%s", err)
-		return err
-	}
-	return nil
+	return cm.loadConfigFile()
 }
 
 func (cm *ConfigManager) loadConfigFile() error {
@@ -186,9 +180,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
-
-	err = goyaml.Unmarshal(file, &cm.Config)
-	if err != nil {
+	if err = goyaml.Unmarshal(file, &cm.Config); err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
 	return nil
@@ -210,26 +202,28 @@ func (cm *ConfigManager) Hostname() string {
 	}
 }
 
-func (cm *ConfigManager) RootCAs() *x509.CertPool {
-	if cm.DestProtocol() == "tls" && cm.DestHost() == "logs.papertrailapp.com" {
-		return papertrail.RootCA()
-	} else {
-		return nil
+func (cm *ConfigManager) RootCAs() (*x509.CertPool, error) {
+	host, err := cm.DestHost()
+	if err != nil {
+		return nil, err
 	}
+	if cm.DestProtocol() == "tls" && host == "logs.papertrailapp.com" {
+		return papertrail.RootCA(), nil
+	}
+	return nil, nil
 }
 
-func (cm *ConfigManager) DestHost() string {
+func (cm *ConfigManager) DestHost() (string, error) {
 	switch {
 	case cm.Flags.DestHost != "":
-		return cm.Flags.DestHost
+		return cm.Flags.DestHost, nil
 	case cm.Config.Destination.Host == "":
-		log.Criticalf("No destination hostname specified")
-		os.Exit(1)
+		return "", fmt.Errorf("No destination hostname specified")
 	}
-	return cm.Config.Destination.Host
+	return cm.Config.Destination.Host, nil
 }
 
-func (cm ConfigManager) DestPort() int {
+func (cm *ConfigManager) DestPort() int {
 	switch {
 	case cm.Flags.DestPort != 0:
 		return cm.Flags.DestPort
@@ -253,22 +247,22 @@ func (cm *ConfigManager) DestProtocol() string {
 	}
 }
 
-func (cm *ConfigManager) Severity() syslog.Priority {
+func (cm *ConfigManager) Severity() (syslog.Priority, error) {
 	s, err := syslog.Severity(cm.Flags.Severity)
 	if err != nil {
-		log.Criticalf("%s is not a designated facility", cm.Flags.Severity)
-		os.Exit(1)
+		err := fmt.Errorf("%s is not a designated facility", cm.Flags.Severity)
+		return syslog.SevEmerg, err
 	}
-	return s
+	return s, nil
 }
 
-func (cm *ConfigManager) Facility() syslog.Priority {
+func (cm *ConfigManager) Facility() (syslog.Priority, error) {
 	f, err := syslog.Facility(cm.Flags.Facility)
 	if err != nil {
-		log.Criticalf("%s is not a designated facility", cm.Flags.Facility)
-		os.Exit(1)
+		err := fmt.Errorf("%s is not a designated facility", cm.Flags.Facility)
+		return syslog.SevEmerg, err
 	}
-	return f
+	return f, nil
 }
 
 func (cm *ConfigManager) Poll() bool {

@@ -102,7 +102,12 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 }
 
 func main() {
-	cm := NewConfigManager()
+	cm, err := NewConfigManager()
+
+	if err != nil {
+		log.Criticalf("Cannot initialize config manager: %v", err)
+		os.Exit(1)
+	}
 
 	if cm.Daemonize() {
 		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
@@ -110,16 +115,37 @@ func main() {
 
 	loggo.ConfigureLoggers(cm.LogLevels())
 
-	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
+	host, err := cm.DestHost()
+	if err != nil {
+		log.Criticalf("Invalid destination host: %v", err)
+		os.Exit(1)
+	}
+	raddr := net.JoinHostPort(host, strconv.Itoa(cm.DestPort()))
 	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
-
+	rootcas, err := cm.RootCAs()
+	if err != nil {
+		log.Criticalf("Invalid root CAs: %v", err)
+		os.Exit(1)
+	}
+	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, rootcas)
 	if err != nil {
 		log.Criticalf("Cannot connect to server: %v", err)
 		os.Exit(1)
 	}
 
-	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll())
+	severity, err := cm.Severity()
+	if err != nil {
+		log.Criticalf("Invalid severity: %v", err)
+		os.Exit(1)
+	}
+
+	facility, err := cm.Facility()
+	if err != nil {
+		log.Criticalf("Invalid facility: %v", err)
+		os.Exit(1)
+	}
+
+	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, severity, facility, cm.Poll())
 
 	for err = range logger.Errors {
 		log.Errorf("Syslog error: %v", err)
