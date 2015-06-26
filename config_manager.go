@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	MinimumRefreshInterval = (time.Duration(10) * time.Second)
+	MinimumRefreshInterval = RefreshInterval(1 * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
