@@ -31,8 +31,8 @@ type ConfigFile struct {
 	Hostname string `yaml:"hostname"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
-	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
-	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
+	ExcludeFiles    RegexCollection  `yaml:"exclude_files"`
+	ExcludePatterns RegexCollection  `yaml:"exclude_patterns"`
 }
 
 type ConfigManager struct {
@@ -124,21 +124,13 @@ func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
 	return true
 }
 
-func NewConfigManager() ConfigManager {
-	cm := ConfigManager{}
-	err := cm.Initialize()
-
-	if err != nil {
-		log.Criticalf("Failed to configure the application: %s", err)
-		os.Exit(1)
+func NewConfigManager() (*ConfigManager, error) {
+	cm := &ConfigManager{
+		Config: ConfigFile{
+			ExcludeFiles:    RegexCollection{},
+			ExcludePatterns: RegexCollection{},
+		},
 	}
-
-	return cm
-}
-
-func (cm *ConfigManager) Initialize() error {
-	cm.Config.ExcludeFiles = &RegexCollection{}
-	cm.Config.ExcludePatterns = &RegexCollection{}
 	cm.parseFlags()
 
 	err := cm.readConfig()
@@ -347,9 +339,9 @@ func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 }
 
 func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
-	return *cm.Config.ExcludeFiles
+	return cm.Config.ExcludeFiles
 }
 
 func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
-	return *cm.Config.ExcludePatterns
+	return cm.Config.ExcludePatterns
 }
