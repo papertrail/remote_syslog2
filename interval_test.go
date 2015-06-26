@@ -21,7 +21,7 @@ type i1 struct {
 func (s *IntervalSuite) SetUpSuite(c *C) {
 }
 
-func (s *SyslogSuite) TestInterval(c *C) {
+func (s *IntervalSuite) TestInterval(c *C) {
 	var data = `
 a: 100s
 b: 10
