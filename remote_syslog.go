@@ -17,6 +17,47 @@ import (
 
 var log = loggo.GetLogger("")
 
+func main() {
+	cm, err := NewConfigManager()
+	if err != nil {
+		log.Criticalf("Cannot initialize config manager: %v", err)
+		os.Exit(1)
+	}
+	// run in the background if asked to
+	if cm.Daemonize() {
+		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
+	}
+	// set up logging
+	loggo.ConfigureLoggers(cm.LogLevels())
+	// connect to remote syslog
+	host := cm.DestHost()
+	raddr := net.JoinHostPort(host, strconv.Itoa(cm.DestPort()))
+	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
+	rootcas := cm.RootCAs()
+	logger, err := syslog.Dial(
+		cm.Hostname(),
+		cm.DestProtocol(),
+		raddr,
+		rootcas,
+	)
+	if err != nil {
+		log.Criticalf("Cannot connect to server: %v", err)
+		os.Exit(1)
+	}
+	// tail files
+	wr := NewWorkerRegistry()
+	log.Debugf("Evaluating globs every %s", cm.RefreshInterval())
+	logMissingFiles := true
+	for {
+		globFiles(cm, logger, &wr, logMissingFiles)
+		for err = range logger.Errors {
+			log.Errorf("Syslog error: %v", err)
+		}
+		time.Sleep(time.Duration(cm.RefreshInterval()))
+		logMissingFiles = false
+	}
+}
+
 // Tails a single file
 func tailOne(
 	cm *ConfigManager,
@@ -109,35 +150,4 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 		}
 	}
 	return false
-}
-
-func main() {
-	cm, err := NewConfigManager()
-
-	if err != nil {
-		log.Criticalf("Cannot initialize config manager: %v", err)
-		os.Exit(1)
-	}
-
-	if cm.Daemonize() {
-		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
-	}
-
-	loggo.ConfigureLoggers(cm.LogLevels())
-
-	host := cm.DestHost()
-	raddr := net.JoinHostPort(host, strconv.Itoa(cm.DestPort()))
-	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	rootcas := cm.RootCAs()
-	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, rootcas)
-	if err != nil {
-		log.Criticalf("Cannot connect to server: %v", err)
-		os.Exit(1)
-	}
-
-	go tailFiles(cm, logger)
-
-	for err = range logger.Errors {
-		log.Errorf("Syslog error: %v", err)
-	}
 }
