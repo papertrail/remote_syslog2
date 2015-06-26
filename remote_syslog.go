@@ -124,37 +124,17 @@ func main() {
 
 	loggo.ConfigureLoggers(cm.LogLevels())
 
-	host, err := cm.DestHost()
-	if err != nil {
-		log.Criticalf("Invalid destination host: %v", err)
-		os.Exit(1)
-	}
+	host := cm.DestHost()
 	raddr := net.JoinHostPort(host, strconv.Itoa(cm.DestPort()))
 	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	rootcas, err := cm.RootCAs()
-	if err != nil {
-		log.Criticalf("Invalid root CAs: %v", err)
-		os.Exit(1)
-	}
+	rootcas := cm.RootCAs()
 	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, rootcas)
 	if err != nil {
 		log.Criticalf("Cannot connect to server: %v", err)
 		os.Exit(1)
 	}
 
-	severity, err := cm.Severity()
-	if err != nil {
-		log.Criticalf("Invalid severity: %v", err)
-		os.Exit(1)
-	}
-
-	facility, err := cm.Facility()
-	if err != nil {
-		log.Criticalf("Invalid facility: %v", err)
-		os.Exit(1)
-	}
-
-	go tailFiles(cm, logger, severity, facility)
+	go tailFiles(cm, logger)
 
 	for err = range logger.Errors {
 		log.Errorf("Syslog error: %v", err)

@@ -49,8 +49,8 @@ type ConfigManager struct {
 		UseTCP          bool
 		UseTLS          bool
 		NoDaemonize     bool
-		Severity        string
-		Facility        string
+		Severity        syslog.Priority
+		Facility        syslog.Priority
 		Poll            bool
 	}
 }
@@ -79,16 +79,27 @@ func (cm *ConfigManager) parseFlags() error {
 	} else {
 		cm.Flags.NoDaemonize = true
 	}
-	pflag.StringVarP(&cm.Flags.Facility, "facility", "f", "user", "Facility")
+	// facility
+	var s string
+	pflag.StringVarP(&s, "facility", "f", "user", "Facility")
+	facility, err := syslog.Facility(s)
+	if err != nil {
+		return fmt.Errorf("%s is not a designated facility", s)
+	}
+	cm.Flags.Facility = facility
 	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
 	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "", "Location of the PID file")
-	// --parse-syslog
-	pflag.StringVarP(&cm.Flags.Severity, "severity", "s", "notice", "Severity")
+	// severity
+	pflag.StringVarP(&s, "severity", "s", "notice", "Severity")
+	severity, err := syslog.Severity(s)
+	if err != nil {
+		return fmt.Errorf("Invalid severity: %s", s)
+	}
+	cm.Flags.Severity = severity
 	// --strip-color
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	var s string
 	pflag.StringVar(&s, "new-file-check-interval", "", "How often to check for new files")
 	if err := cm.Flags.RefreshInterval.Set(s); err != nil {
 		return err
@@ -119,6 +130,15 @@ func (cm *ConfigManager) loadConfigFile() error {
 	if err = goyaml.Unmarshal(file, &cm.Config); err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
+	return cm.validateConfig()
+}
+
+func (cm *ConfigManager) validateConfig() error {
+	// destination host
+	if cm.Flags.DestHost == "" &&
+		cm.Config.Destination.Host == "" {
+		return fmt.Errorf("No destination hostname specified")
+	}
 	return nil
 }
 
@@ -138,25 +158,20 @@ func (cm *ConfigManager) Hostname() string {
 	}
 }
 
-func (cm *ConfigManager) RootCAs() (*x509.CertPool, error) {
-	host, err := cm.DestHost()
-	if err != nil {
-		return nil, err
+func (cm *ConfigManager) RootCAs() *x509.CertPool {
+	host := cm.DestHost()
+	if cm.DestProtocol() == "tls" &&
+		host == "logs.papertrailapp.com" {
+		return papertrail.RootCA()
 	}
-	if cm.DestProtocol() == "tls" && host == "logs.papertrailapp.com" {
-		return papertrail.RootCA(), nil
-	}
-	return nil, nil
+	return nil
 }
 
-func (cm *ConfigManager) DestHost() (string, error) {
-	switch {
-	case cm.Flags.DestHost != "":
-		return cm.Flags.DestHost, nil
-	case cm.Config.Destination.Host == "":
-		return "", fmt.Errorf("No destination hostname specified")
+func (cm *ConfigManager) DestHost() string {
+	if cm.Flags.DestHost != "" {
+		return cm.Flags.DestHost
 	}
-	return cm.Config.Destination.Host, nil
+	return cm.Config.Destination.Host
 }
 
 func (cm *ConfigManager) DestPort() int {
@@ -183,22 +198,12 @@ func (cm *ConfigManager) DestProtocol() string {
 	}
 }
 
-func (cm *ConfigManager) Severity() (syslog.Priority, error) {
-	s, err := syslog.Severity(cm.Flags.Severity)
-	if err != nil {
-		err := fmt.Errorf("%s is not a designated facility", cm.Flags.Severity)
-		return syslog.SevEmerg, err
-	}
-	return s, nil
+func (cm *ConfigManager) Severity() syslog.Priority {
+	return cm.Flags.Severity
 }
 
-func (cm *ConfigManager) Facility() (syslog.Priority, error) {
-	f, err := syslog.Facility(cm.Flags.Facility)
-	if err != nil {
-		err := fmt.Errorf("%s is not a designated facility", cm.Flags.Facility)
-		return syslog.SevEmerg, err
-	}
-	return f, nil
+func (cm *ConfigManager) Facility() syslog.Priority {
+	return cm.Flags.Facility
 }
 
 func (cm *ConfigManager) Poll() bool {
