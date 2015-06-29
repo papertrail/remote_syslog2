@@ -5,8 +5,8 @@ import (
 )
 
 type WorkerRegistry struct {
+	sync.RWMutex
 	workers map[string]bool
-	mu      sync.RWMutex
 }
 
 func NewWorkerRegistry() *WorkerRegistry {
@@ -16,22 +16,22 @@ func NewWorkerRegistry() *WorkerRegistry {
 }
 
 func (w *WorkerRegistry) Exists(worker string) bool {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+	w.RLock()
+	defer w.RUnlock()
 	_, ok := w.workers[worker]
 	return ok
 }
 
 func (w *WorkerRegistry) Add(worker string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.Lock()
+	defer w.Unlock()
 	log.Tracef("Adding %s to worker registry", worker)
 	w.workers[worker] = true
 }
 
 func (w *WorkerRegistry) Remove(worker string) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.Lock()
+	defer w.Unlock()
 	log.Tracef("Removing %s from worker registry", worker)
 	delete(w.workers, worker)
 	return nil
