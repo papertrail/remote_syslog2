@@ -64,7 +64,6 @@ func NewConfigManager() (*ConfigManager, error) {
 	}
 	cm.parseFlags()
 	if err := cm.readConfig(); err != nil {
-		log.Errorf("Error reading config file: %v", err)
 		return nil, err
 	}
 	return cm, nil
