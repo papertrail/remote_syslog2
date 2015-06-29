@@ -13,11 +13,11 @@ import (
 	"github.com/papertrail/remote_syslog2/papertrail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
-	"launchpad.net/goyaml"
+	"gopkg.in/yaml.v2"
 )
 
 const (
-	MinimumRefreshInterval = RefreshInterval(1 * time.Second)
+	MinimumRefreshInterval = RefreshInterval(10 * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
@@ -62,9 +62,10 @@ func NewConfigManager() (*ConfigManager, error) {
 			ExcludePatterns: RegexCollection{},
 		},
 	}
-	cm.parseFlags()
+	if err := cm.parseFlags(); err != nil {
+		return nil, err
+	}
 	if err := cm.readConfig(); err != nil {
-		log.Errorf("Error reading config file: %v", err)
 		return nil, err
 	}
 	return cm, nil
@@ -100,7 +101,7 @@ func (cm *ConfigManager) parseFlags() error {
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.StringVar(&s, "new-file-check-interval", "", "How often to check for new files")
+	pflag.StringVar(&s, "new-file-check-interval", "10s", "How often to check for new files")
 	if err := cm.Flags.RefreshInterval.Set(s); err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
-	if err = goyaml.Unmarshal(file, &cm.Config); err != nil {
+	if err = yaml.Unmarshal(file, &cm.Config); err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
 	return cm.validateConfig()
@@ -264,6 +265,9 @@ func (cm *ConfigManager) LogLevels() string {
 func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 	if cm.Flags.RefreshInterval != 0 {
 		return cm.Flags.RefreshInterval
+	}
+	if cm.Config.RefreshInterval != 0 {
+		return cm.Config.RefreshInterval
 	}
 	return MinimumRefreshInterval
 }

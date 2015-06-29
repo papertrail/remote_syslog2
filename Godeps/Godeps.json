@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/papertrail/remote_syslog2",
-	"GoVersion": "go1.2.1",
+	"GoVersion": "go1.4",
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
@@ -27,13 +27,20 @@
 			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
 		},
 		{
+			"ImportPath": "gopkg.in/check.v1",
+			"Rev": "8d49746f13e4c654088c52685541fcf4cbc8fa59"
+		},
+		{
 			"ImportPath": "gopkg.in/tomb.v1",
 			"Rev": "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 		},
 		{
-			"ImportPath": "launchpad.net/goyaml",
-			"Comment": "50",
-			"Rev": "gustavo@niemeyer.net-20131114120802-abe042syx64z2m7s"
+			"ImportPath": "gopkg.in/yaml.v1",
+			"Rev": "9f9df34309c04878acc86042b16630b0f696e1de"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "7ad95dd0798a40da1ccdff6dff35fd177b5edf40"
 		}
 	]
 }

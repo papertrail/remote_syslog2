@@ -1,8 +1,6 @@
 package main
 
 import (
-	lg "log"
-
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v1"
 )
@@ -29,5 +27,4 @@ b:
 `
 	v := &r1{}
 	c.Assert(yaml.Unmarshal([]byte(data), &v), IsNil)
-	lg.Printf(">>> v = %+v", v)
 }
