@@ -90,7 +90,7 @@ func (cm *ConfigManager) parseFlags() error {
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
 	var s string
-	pflag.StringVar(&s, "new-file-check-interval", "", "How often to check for new files")
+	pflag.StringVar(&s, "new-file-check-interval", "10s", "How often to check for new files")
 	if err := cm.Flags.RefreshInterval.Set(s); err != nil {
 		return err
 	}
