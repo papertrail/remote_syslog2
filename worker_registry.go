@@ -4,13 +4,15 @@ import (
 	"sync"
 )
 
-func NewWorkerRegistry() WorkerRegistry {
-	return WorkerRegistry{workers: make(map[string]bool)}
-}
-
 type WorkerRegistry struct {
 	workers map[string]bool
 	mu      sync.RWMutex
+}
+
+func NewWorkerRegistry() *WorkerRegistry {
+	return &WorkerRegistry{
+		workers: map[string]bool{},
+	}
 }
 
 func (w *WorkerRegistry) Exists(worker string) bool {
