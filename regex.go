@@ -23,14 +23,17 @@ func (self *RegexCollection) String() string {
 func (self *RegexCollection) SetYAML(tag string, v interface{}) bool {
 	a, ok := v.([]interface{})
 	if !ok {
+		log.Errorf("Expected slice of interface but got %v", v)
 		return false
 	}
 	for _, item := range a {
 		s, ok := item.(string)
 		if !ok {
+			log.Errorf("Expected string but got %v", item)
 			return false
 		}
 		if err := self.Set(s); err != nil {
+			log.Errorf("Error setting regex '%s': %v", s, err)
 			return false
 		}
 	}
