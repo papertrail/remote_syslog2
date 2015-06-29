@@ -261,6 +261,9 @@ func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 	if cm.Flags.RefreshInterval != 0 {
 		return cm.Flags.RefreshInterval
 	}
+	if cm.Config.RefreshInterval != 0 {
+		return cm.Config.RefreshInterval
+	}
 	return MinimumRefreshInterval
 }
 
