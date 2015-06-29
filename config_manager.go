@@ -62,7 +62,9 @@ func NewConfigManager() (*ConfigManager, error) {
 			ExcludePatterns: RegexCollection{},
 		},
 	}
-	cm.parseFlags()
+	if err := cm.parseFlags(); err != nil {
+		return nil, err
+	}
 	if err := cm.readConfig(); err != nil {
 		return nil, err
 	}
