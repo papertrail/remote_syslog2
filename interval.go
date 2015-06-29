@@ -39,6 +39,8 @@ func (self *RefreshInterval) Set(v interface{}) error {
 }
 
 func (self *RefreshInterval) SetYAML(tag string, v interface{}) bool {
-	err := self.Set(v)
-	return err != nil
+	if err := self.Set(v); err != nil {
+		return false
+	}
+	return true
 }
