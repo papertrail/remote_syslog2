@@ -18,25 +18,25 @@ import (
 var log = loggo.GetLogger("")
 
 func main() {
-	cm, err := NewConfigManager()
+	config, err := NewConfig()
 	if err != nil {
 		log.Criticalf("Cannot initialize config manager: %v", err)
 		os.Exit(1)
 	}
 	// run in the background if asked to
-	if cm.Daemonize() {
-		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
+	if config.Daemonize {
+		utils.Daemonize(config.DebugLogFile, config.PidFile)
 	}
 	// set up logging
-	loggo.ConfigureLoggers(cm.LogLevels())
+	loggo.ConfigureLoggers(config.LogLevels)
 	// connect to remote syslog
-	host := cm.DestHost()
-	raddr := net.JoinHostPort(host, strconv.Itoa(cm.DestPort()))
-	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	rootcas := cm.RootCAs()
+	host := config.DestHost
+	raddr := net.JoinHostPort(host, strconv.Itoa(config.DestPort))
+	log.Infof("Connecting to %s over %s", raddr, config.Protocol)
+	rootcas := config.RootCAs
 	logger, err := syslog.Dial(
-		cm.Hostname(),
-		cm.DestProtocol(),
+		config.Hostname,
+		config.Protocol,
 		raddr,
 		rootcas,
 	)
@@ -46,21 +46,21 @@ func main() {
 	}
 	// tail files
 	wr := NewWorkerRegistry()
-	log.Debugf("Evaluating globs every %s", cm.RefreshInterval())
+	log.Debugf("Evaluating globs every %s", config.RefreshInterval)
 	logMissingFiles := true
 	for {
-		globFiles(cm, logger, &wr, logMissingFiles)
+		globFiles(config, logger, &wr, logMissingFiles)
 		for err = range logger.Errors {
 			log.Errorf("Syslog error: %v", err)
 		}
-		time.Sleep(time.Duration(cm.RefreshInterval()))
+		time.Sleep(time.Duration(config.RefreshInterval))
 		logMissingFiles = false
 	}
 }
 
 // Tails a single file
 func tailOne(
-	cm *ConfigManager,
+	config *Config,
 	file string,
 	logger *syslog.Logger,
 	wr *WorkerRegistry,
@@ -71,7 +71,7 @@ func tailOne(
 		ReOpen:    true,
 		Follow:    true,
 		MustExist: true,
-		Poll:      cm.Poll(),
+		Poll:      config.Poll,
 		Location:  &tail.SeekInfo{0, os.SEEK_END},
 	}
 	t, err := tail.TailFile(file, tailConfig)
@@ -80,10 +80,10 @@ func tailOne(
 		return
 	}
 	for line := range t.Lines {
-		if !matchExps(line.Text, cm.ExcludePatterns()) {
+		if !matchExps(line.Text, config.ExcludePatterns) {
 			logger.Packets <- syslog.Packet{
-				Severity: cm.Severity(),
-				Facility: cm.Facility(),
+				Severity: config.Severity,
+				Facility: config.Facility,
 				Time:     time.Now(),
 				Hostname: logger.ClientHostname,
 				Tag:      path.Base(file),
@@ -101,13 +101,13 @@ func tailOne(
 
 //
 func globFiles(
-	cm *ConfigManager,
+	config *Config,
 	logger *syslog.Logger,
 	wr *WorkerRegistry,
 	logMissingFiles bool,
 ) {
 	log.Debugf("Evaluating file globs")
-	for _, glob := range cm.Files() {
+	for _, glob := range config.Files {
 		files, err := filepath.Glob(utils.ResolvePath(glob))
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob, err)
@@ -120,11 +120,11 @@ func globFiles(
 			switch {
 			case wr.Exists(file):
 				log.Debugf("Skipping %s because it is already running", file)
-			case matchExps(file, cm.ExcludeFiles()):
+			case matchExps(file, config.ExcludeFiles):
 				log.Debugf("Skipping %s because it is excluded by regular expression", file)
 			default:
 				log.Infof("Forwarding %s", file)
-				go tailOne(cm, file, logger, wr)
+				go tailOne(config, file, logger, wr)
 			}
 		}
 	}

@@ -7,17 +7,18 @@ import (
 )
 
 type SyslogSuite struct {
-	cm *ConfigManager
+	config *Config
 }
 
 var _ = Suite(&SyslogSuite{})
 
 func (s *SyslogSuite) SetUpSuite(c *C) {
-	cm, err := NewConfigManager()
+	config, err := NewConfig()
 	c.Assert(err, IsNil)
-	s.cm = cm
-	s.cm.Flags.ConfigFile = "test/config_with_host.yaml"
-	c.Assert(s.cm.loadConfigFile(), IsNil)
+	s.config = config
+	s.config.ConfigFile = "test/config_with_host.yaml"
+	c.Assert(s.config.load(), IsNil)
+	c.Assert(s.config.validate(), IsNil)
 }
 
 func (s *SyslogSuite) TearDownSuite(c *C) {
@@ -27,12 +28,6 @@ func (s *SyslogSuite) SetUpTest(c *C) {
 }
 
 func (s *SyslogSuite) TearDownTest(c *C) {
-}
-
-func (s *SyslogSuite) TestConfig(c *C) {
-	c.Assert(s.cm.Hostname(), Equals, "test-host-from-config")
-	s.cm.Flags.Hostname = "test-host-from-commandline"
-	c.Assert(s.cm.Hostname(), Equals, s.cm.Flags.Hostname)
 }
 
 func (s *SyslogSuite) TestFilters(c *C) {

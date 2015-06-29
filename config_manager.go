@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -17,11 +16,33 @@ import (
 )
 
 const (
-	MinimumRefreshInterval = RefreshInterval(10 * time.Second)
-	DefaultConfigFile      = "/etc/log_files.yml"
+	MIN_REFRESH_INTERVAL = RefreshInterval(10 * time.Second)
+	DEFAULT_CONFIG_FILE  = "/etc/log_files.yml"
 )
 
-type ConfigFile struct {
+type Config struct {
+	ConfigFile      string
+	Files           []string
+	DestHost        string
+	DestPort        int
+	Protocol        string
+	Hostname        string
+	RefreshInterval RefreshInterval
+	ExcludeFiles    RegexCollection
+	ExcludePatterns RegexCollection
+	LogLevels       string
+	DebugLogFile    string
+	PidFile         string
+	UseTCP          bool
+	UseTLS          bool
+	Daemonize       bool
+	Severity        syslog.Priority
+	Facility        syslog.Priority
+	Poll            bool
+	RootCAs         *x509.CertPool
+}
+
+type configfile struct {
 	Files       []string
 	Destination struct {
 		Host     string `yaml:"host"`
@@ -34,52 +55,73 @@ type ConfigFile struct {
 	ExcludePatterns RegexCollection `yaml:"exclude_patterns"`
 }
 
-type ConfigManager struct {
-	Config    ConfigFile
-	FlagFiles []string
-	Flags     struct {
-		Hostname        string
-		DestHost        string
-		DestPort        int
-		ConfigFile      string
-		LogLevels       string
-		DebugLogFile    string
-		PidFile         string
-		RefreshInterval RefreshInterval
-		UseTCP          bool
-		UseTLS          bool
-		NoDaemonize     bool
-		Severity        syslog.Priority
-		Facility        syslog.Priority
-		Poll            bool
+func NewConfig() (*Config, error) {
+	self := &Config{
+		ConfigFile:      DEFAULT_CONFIG_FILE,
+		ExcludeFiles:    RegexCollection{},
+		ExcludePatterns: RegexCollection{},
+		DestHost:        "localhost",
 	}
-}
-
-func NewConfigManager() (*ConfigManager, error) {
-	cm := &ConfigManager{
-		Config: ConfigFile{
-			ExcludeFiles:    RegexCollection{},
-			ExcludePatterns: RegexCollection{},
-		},
-	}
-	if err := cm.parseFlags(); err != nil {
+	if err := self.load(); err != nil {
 		return nil, err
 	}
-	if err := cm.readConfig(); err != nil {
+	// parse flags override config file
+	if err := self.override(); err != nil {
 		return nil, err
 	}
-	return cm, nil
+	// check settings and set defaults if needed
+	if err := self.validate(); err != nil {
+		return nil, err
+	}
+	return self, nil
 }
 
-func (cm *ConfigManager) parseFlags() error {
-	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", DefaultConfigFile, "Path to config")
-	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
-	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
+func (self *Config) load() error {
+	log.Infof("Reading configuration file %s", self.ConfigFile)
+	file, err := ioutil.ReadFile(self.ConfigFile)
+	// don't error if the default config file isn't found
+	if os.IsNotExist(err) && self.ConfigFile == DEFAULT_CONFIG_FILE {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("Could not read the config file: %s", err)
+	}
+	config := &configfile{}
+	if err = yaml.Unmarshal(file, &config); err != nil {
+		return fmt.Errorf("Could not parse the config file: %s", err)
+	}
+	self.Files = config.Files
+	self.DestHost = config.Destination.Host
+	self.DestPort = config.Destination.Port
+	self.Protocol = config.Destination.Protocol
+	self.Hostname = config.Hostname
+	self.RefreshInterval = config.RefreshInterval
+	self.ExcludeFiles = config.ExcludeFiles
+	self.ExcludePatterns = config.ExcludePatterns
+	return nil
+}
+
+func (self *Config) override() error {
+	configfile := ""
+	pflag.StringVarP(&configfile, "configfile", "c", "", "Path to config")
+	if configfile != "" {
+		self.ConfigFile = configfile
+	}
+	desthost := ""
+	pflag.StringVarP(&desthost, "dest-host", "d", "", "Destination syslog hostname or IP")
+	if desthost != "" {
+		self.DestHost = desthost
+	}
+	destport := 0
+	pflag.IntVarP(&destport, "dest-port", "p", 0, "Destination syslog port")
+	if destport != 0 {
+		self.DestPort = destport
+	}
+	foreground := true
 	if utils.CanDaemonize {
-		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
-	} else {
-		cm.Flags.NoDaemonize = true
+		pflag.BoolVarP(&foreground, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
 	}
+	self.Daemonize = !foreground
 	// facility
 	var s string
 	pflag.StringVarP(&s, "facility", "f", "user", "Facility")
@@ -87,144 +129,88 @@ func (cm *ConfigManager) parseFlags() error {
 	if err != nil {
 		return fmt.Errorf("%s is not a designated facility", s)
 	}
-	cm.Flags.Facility = facility
-	pflag.StringVar(&cm.Flags.Hostname, "hostname", "", "Local hostname to send from")
-	pflag.StringVar(&cm.Flags.PidFile, "pid-file", "", "Location of the PID file")
+	self.Facility = facility
+	pflag.StringVar(&self.Hostname, "hostname", "", "Local hostname to send from")
+	pflag.StringVar(&self.PidFile, "pid-file", "", "Location of the PID file")
 	// severity
 	pflag.StringVarP(&s, "severity", "s", "notice", "Severity")
 	severity, err := syslog.Severity(s)
 	if err != nil {
 		return fmt.Errorf("Invalid severity: %s", s)
 	}
-	cm.Flags.Severity = severity
+	self.Severity = severity
 	// --strip-color
-	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
-	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
-	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.StringVar(&s, "new-file-check-interval", "10s", "How often to check for new files")
-	if err := cm.Flags.RefreshInterval.Set(s); err != nil {
-		return err
+	pflag.BoolVar(&self.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
+	pflag.BoolVar(&self.UseTLS, "tls", false, "Connect via TCP with TLS")
+	pflag.BoolVar(&self.Poll, "poll", false, "Detect changes by polling instead of inotify")
+	pflag.StringVar(&s, "new-file-check-interval", "", "How often to check for new files")
+	if s != "" {
+		if err := self.RefreshInterval.Set(s); err != nil {
+			return err
+		}
 	}
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
-	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
-	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	logfile := ""
+	pflag.StringVar(&logfile, "debug-log-cfg", "", "the debug log file")
+	if logfile != "" {
+		self.DebugLogFile = logfile
+	}
+	pflag.StringVar(&self.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	pflag.Parse()
-	cm.FlagFiles = pflag.Args()
+	self.Files = append(self.Files, pflag.Args()...)
 	return nil
 }
 
-func (cm *ConfigManager) readConfig() error {
-	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
-	return cm.loadConfigFile()
-}
-
-func (cm *ConfigManager) loadConfigFile() error {
-	file, err := ioutil.ReadFile(cm.Flags.ConfigFile)
-	// don't error if the default config file isn't found
-	if os.IsNotExist(err) && cm.Flags.ConfigFile == DefaultConfigFile {
-		return nil
+func (self *Config) validate() error {
+	// hostname
+	if self.Hostname == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			return fmt.Errorf("Could not obtain host name: %v", err)
+		}
+		self.Hostname = hostname
 	}
-	if err != nil {
-		return fmt.Errorf("Could not read the config file: %s", err)
-	}
-	if err = yaml.Unmarshal(file, &cm.Config); err != nil {
-		return fmt.Errorf("Could not parse the config file: %s", err)
-	}
-	return cm.validateConfig()
-}
-
-func (cm *ConfigManager) validateConfig() error {
 	// destination host
-	if cm.Flags.DestHost == "" &&
-		cm.Config.Destination.Host == "" {
+	if self.DestHost == "" {
 		return fmt.Errorf("No destination hostname specified")
 	}
+	// destination port
+	if self.DestPort == 0 {
+		self.DestPort = 514
+	}
+	// protocol
+	if self.Protocol == "" {
+		switch {
+		case self.UseTLS:
+			self.Protocol = "tls"
+		case self.UseTCP:
+			self.Protocol = "tcp"
+		default:
+			self.Protocol = "udp"
+		}
+	}
+	// root CAs
+	if self.Protocol == "tls" &&
+		self.DestHost == "logs.papertrailapp.com" {
+		self.RootCAs = papertrail.RootCA()
+	}
+	// log file
+	if self.DebugLogFile == "" {
+		self.DebugLogFile = "/dev/null"
+	}
+	// refresh interval
+	if self.RefreshInterval == 0 {
+		self.RefreshInterval = MIN_REFRESH_INTERVAL
+	}
+	// pid file
+	if self.PidFile == "" {
+		self.PidFile = self.defaultPidFile()
+	}
 	return nil
 }
 
-func (cm *ConfigManager) Daemonize() bool {
-	return !cm.Flags.NoDaemonize
-}
-
-func (cm *ConfigManager) Hostname() string {
-	switch {
-	case cm.Flags.Hostname != "":
-		return cm.Flags.Hostname
-	case cm.Config.Hostname != "":
-		return cm.Config.Hostname
-	default:
-		hostname, _ := os.Hostname()
-		return hostname
-	}
-}
-
-func (cm *ConfigManager) RootCAs() *x509.CertPool {
-	host := cm.DestHost()
-	if cm.DestProtocol() == "tls" &&
-		host == "logs.papertrailapp.com" {
-		return papertrail.RootCA()
-	}
-	return nil
-}
-
-func (cm *ConfigManager) DestHost() string {
-	if cm.Flags.DestHost != "" {
-		return cm.Flags.DestHost
-	}
-	return cm.Config.Destination.Host
-}
-
-func (cm *ConfigManager) DestPort() int {
-	switch {
-	case cm.Flags.DestPort != 0:
-		return cm.Flags.DestPort
-	case cm.Config.Destination.Port != 0:
-		return cm.Config.Destination.Port
-	default:
-		return 514
-	}
-}
-
-func (cm *ConfigManager) DestProtocol() string {
-	switch {
-	case cm.Flags.UseTLS:
-		return "tls"
-	case cm.Flags.UseTCP:
-		return "tcp"
-	case cm.Config.Destination.Protocol != "":
-		return cm.Config.Destination.Protocol
-	default:
-		return "udp"
-	}
-}
-
-func (cm *ConfigManager) Severity() syslog.Priority {
-	return cm.Flags.Severity
-}
-
-func (cm *ConfigManager) Facility() syslog.Priority {
-	return cm.Flags.Facility
-}
-
-func (cm *ConfigManager) Poll() bool {
-	return cm.Flags.Poll
-}
-
-func (cm *ConfigManager) Files() []string {
-	return append(cm.FlagFiles, cm.Config.Files...)
-}
-
-func (cm *ConfigManager) DebugLogFile() string {
-	switch {
-	case cm.Flags.DebugLogFile != "":
-		return cm.Flags.DebugLogFile
-	default:
-		return "/dev/null"
-	}
-}
-
-func (cm *ConfigManager) defaultPidFile() string {
+func (self *Config) defaultPidFile() string {
 	pidFiles := []string{
 		"/var/run/remote_syslog.pid",
 		os.Getenv("HOME") + "/run/remote_syslog.pid",
@@ -247,35 +233,4 @@ func (cm *ConfigManager) defaultPidFile() string {
 		return f
 	}
 	return "/tmp/remote_syslog.pid"
-}
-
-func (cm *ConfigManager) PidFile() string {
-	switch {
-	case cm.Flags.PidFile != "":
-		return cm.Flags.PidFile
-	default:
-		return cm.defaultPidFile()
-	}
-}
-
-func (cm *ConfigManager) LogLevels() string {
-	return cm.Flags.LogLevels
-}
-
-func (cm *ConfigManager) RefreshInterval() RefreshInterval {
-	if cm.Flags.RefreshInterval != 0 {
-		return cm.Flags.RefreshInterval
-	}
-	if cm.Config.RefreshInterval != 0 {
-		return cm.Config.RefreshInterval
-	}
-	return MinimumRefreshInterval
-}
-
-func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
-	return cm.Config.ExcludeFiles
-}
-
-func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
-	return cm.Config.ExcludePatterns
 }
