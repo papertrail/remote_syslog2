@@ -33,7 +33,7 @@ func (s *SyslogSuite) TearDownTest(c *C) {
 func (s *SyslogSuite) TestFilters(c *C) {
 	expressions := []*regexp.Regexp{regexp.MustCompile("\\d+")}
 	message := "test message"
-	c.Assert(matchExps(message, expressions), Not(Equals), true)
+	c.Assert(match(message, expressions), Not(Equals), true)
 	message = "0000"
-	c.Assert(matchExps(message, expressions), Equals, true)
+	c.Assert(match(message, expressions), Equals, true)
 }
