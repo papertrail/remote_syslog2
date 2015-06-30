@@ -3,13 +3,9 @@ package main
 import (
 	"net"
 	"os"
-	"path"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"time"
 
-	"github.com/ActiveState/tail"
 	"github.com/howbazaar/loggo"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
@@ -47,96 +43,27 @@ func main() {
 	// tail files
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", config.RefreshInterval)
-	logMissingFiles := true
+	warn := true
 	for {
-		globFiles(config, logger, &wr, logMissingFiles)
-		for err = range logger.Errors {
-			log.Errorf("Syslog error: %v", err)
+		files, err := glob(config.Files, config.ExcludeFiles, wr, warn)
+		if err == nil {
+			for file, _ := range files {
+				log.Infof("Forwarding %s", file)
+				go tailone(
+					file,
+					config.ExcludePatterns,
+					config.Severity,
+					config.Facility,
+					config.Poll,
+					logger,
+					wr,
+				)
+				for err = range logger.Errors() {
+					log.Errorf("Syslog error: %v", err)
+				}
+			}
 		}
 		time.Sleep(time.Duration(config.RefreshInterval))
-		logMissingFiles = false
+		warn = false
 	}
-}
-
-// Tails a single file
-func tailOne(
-	config *Config,
-	file string,
-	logger *syslog.Logger,
-	wr *WorkerRegistry,
-) {
-	defer wr.Remove(file)
-	wr.Add(file)
-	tailConfig := tail.Config{
-		ReOpen:    true,
-		Follow:    true,
-		MustExist: true,
-		Poll:      config.Poll,
-		Location:  &tail.SeekInfo{0, os.SEEK_END},
-	}
-	t, err := tail.TailFile(file, tailConfig)
-	if err != nil {
-		log.Errorf("%s", err)
-		return
-	}
-	for line := range t.Lines {
-		if !matchExps(line.Text, config.ExcludePatterns) {
-			logger.Packets <- syslog.Packet{
-				Severity: config.Severity,
-				Facility: config.Facility,
-				Time:     time.Now(),
-				Hostname: logger.ClientHostname,
-				Tag:      path.Base(file),
-				Message:  line.Text,
-			}
-			log.Tracef("Forwarding: %s", line.Text)
-		} else {
-			log.Tracef("Not Forwarding: %s", line.Text)
-		}
-
-	}
-
-	log.Errorf("Tail worker executed abnormally")
-}
-
-//
-func globFiles(
-	config *Config,
-	logger *syslog.Logger,
-	wr *WorkerRegistry,
-	logMissingFiles bool,
-) {
-	log.Debugf("Evaluating file globs")
-	for _, glob := range config.Files {
-		files, err := filepath.Glob(utils.ResolvePath(glob))
-		if err != nil {
-			log.Errorf("Failed to glob %s: %s", glob, err)
-			return
-		}
-		if files == nil && logMissingFiles {
-			log.Errorf("Cannot forward %s, it may not exist", glob)
-		}
-		for _, file := range files {
-			switch {
-			case wr.Exists(file):
-				log.Debugf("Skipping %s because it is already running", file)
-			case matchExps(file, config.ExcludeFiles):
-				log.Debugf("Skipping %s because it is excluded by regular expression", file)
-			default:
-				log.Infof("Forwarding %s", file)
-				go tailOne(config, file, logger, wr)
-			}
-		}
-	}
-}
-
-// Evaluates each regex against the string. If any one is a match
-// the function returns true, otherwise it returns false
-func matchExps(value string, expressions []*regexp.Regexp) bool {
-	for _, exp := range expressions {
-		if exp.MatchString(value) {
-			return true
-		}
-	}
-	return false
 }
