@@ -7,18 +7,11 @@ import (
 )
 
 type SyslogSuite struct {
-	config *Config
 }
 
 var _ = Suite(&SyslogSuite{})
 
 func (s *SyslogSuite) SetUpSuite(c *C) {
-	config, err := NewConfig()
-	c.Assert(err, IsNil)
-	s.config = config
-	s.config.ConfigFile = "test/config_with_host.yaml"
-	c.Assert(s.config.load(), IsNil)
-	c.Assert(s.config.validate(), IsNil)
 }
 
 func (s *SyslogSuite) TearDownSuite(c *C) {

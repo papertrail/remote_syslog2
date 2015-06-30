@@ -102,63 +102,58 @@ func (self *Config) load() error {
 }
 
 func (self *Config) override() error {
-	configfile := ""
-	pflag.StringVarP(&configfile, "configfile", "c", "", "Path to config")
-	if configfile != "" {
-		self.ConfigFile = configfile
-	}
-	desthost := ""
-	pflag.StringVarP(&desthost, "dest-host", "d", "", "Destination syslog hostname or IP")
-	if desthost != "" {
-		self.DestHost = desthost
-	}
-	destport := 0
-	pflag.IntVarP(&destport, "dest-port", "p", 0, "Destination syslog port")
-	if destport != 0 {
-		self.DestPort = destport
-	}
-	foreground := true
-	if utils.CanDaemonize {
-		pflag.BoolVarP(&foreground, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
-	}
-	self.Daemonize = !foreground
-	// facility
-	var s string
-	pflag.StringVarP(&s, "facility", "f", "user", "Facility")
-	facility, err := syslog.Facility(s)
-	if err != nil {
-		return fmt.Errorf("%s is not a designated facility", s)
-	}
-	self.Facility = facility
+	configfile := pflag.StringP("configfile", "c", "", "Path to config")
+	desthost := pflag.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
+	destport := pflag.IntP("dest-port", "p", 0, "Destination syslog port")
+	logfile := pflag.String("debug-log-cfg", "", "the debug log file")
+	foreground := pflag.BoolP("no-detach", "D", false, "Don't daemonize and detach from the terminal")
+	facility := pflag.StringP("facility", "f", "user", "Facility")
+	severity := pflag.StringP("severity", "s", "notice", "Severity")
+	refresh := pflag.String("new-file-check-interval", "", "How often to check for new files")
+	//
 	pflag.StringVar(&self.Hostname, "hostname", "", "Local hostname to send from")
 	pflag.StringVar(&self.PidFile, "pid-file", "", "Location of the PID file")
-	// severity
-	pflag.StringVarP(&s, "severity", "s", "notice", "Severity")
-	severity, err := syslog.Severity(s)
-	if err != nil {
-		return fmt.Errorf("Invalid severity: %s", s)
-	}
-	self.Severity = severity
 	// --strip-color
 	pflag.BoolVar(&self.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&self.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&self.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.StringVar(&s, "new-file-check-interval", "", "How often to check for new files")
-	if s != "" {
-		if err := self.RefreshInterval.Set(s); err != nil {
+	pflag.StringVar(&self.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
+	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
+	pflag.Parse()
+	// set
+	if utils.CanDaemonize {
+		self.Daemonize = !*foreground
+	}
+	v, err := syslog.Facility(*facility)
+	if err != nil {
+		return fmt.Errorf("%s is not a designated facility", *facility)
+	}
+	self.Facility = v
+	v, err = syslog.Severity(*severity)
+	if err != nil {
+		return fmt.Errorf("Invalid severity: %s", *severity)
+	}
+	self.Severity = v
+	if *refresh != "" {
+		if err := self.RefreshInterval.Set(*refresh); err != nil {
 			return err
 		}
 	}
-	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
-	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
-	logfile := ""
-	pflag.StringVar(&logfile, "debug-log-cfg", "", "the debug log file")
-	if logfile != "" {
-		self.DebugLogFile = logfile
-	}
-	pflag.StringVar(&self.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
-	pflag.Parse()
 	self.Files = append(self.Files, pflag.Args()...)
+	// override
+	if *configfile != "" {
+		self.ConfigFile = *configfile
+	}
+	if *desthost != "" {
+		self.DestHost = *desthost
+	}
+	if *destport != 0 {
+		self.DestPort = *destport
+	}
+	if *logfile != "" {
+		self.DebugLogFile = *logfile
+	}
 	return nil
 }
 
