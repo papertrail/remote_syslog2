@@ -47,7 +47,7 @@ func main() {
 	for {
 		files, err := glob(config.Files, config.ExcludeFiles, wr, warn)
 		if err == nil {
-			for file, _ := range files {
+			for _, file := range files {
 				log.Infof("Forwarding %s", file)
 				go tailone(
 					file,

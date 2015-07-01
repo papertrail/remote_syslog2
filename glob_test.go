@@ -49,15 +49,17 @@ func (s *GlobSuite) TestSimple(c *C) {
 	c.Assert(err, IsNil)
 	// exact match
 	pats := []string{f1.Name(), f2.Name()}
-	m, err := glob(pats, []*regexp.Regexp{}, s.wr, false)
+	a, err := glob(pats, []*regexp.Regexp{}, s.wr, false)
 	c.Assert(err, IsNil)
+	m := s.mkmap(a)
 	c.Assert(m, HasLen, 2)
 	c.Assert(m[f1.Name()], Equals, true)
 	c.Assert(m[f2.Name()], Equals, true)
 	// simple pattern
 	pats = []string{dir + "/*"}
-	m, err = glob(pats, []*regexp.Regexp{}, s.wr, false)
+	a, err = glob(pats, []*regexp.Regexp{}, s.wr, false)
 	c.Assert(err, IsNil)
+	m = s.mkmap(a)
 	c.Assert(m, HasLen, 2)
 	c.Assert(m[f1.Name()], Equals, true)
 	c.Assert(m[f2.Name()], Equals, true)
@@ -75,20 +77,31 @@ func (s *GlobSuite) TestNested(c *C) {
 	c.Assert(err, IsNil)
 	// top-level file, skip directory
 	pats := []string{dir + "/*"}
-	m, err := glob(pats, []*regexp.Regexp{}, s.wr, false)
+	a, err := glob(pats, []*regexp.Regexp{}, s.wr, false)
 	c.Assert(err, IsNil)
+	m := s.mkmap(a)
 	c.Assert(m, HasLen, 1)
 	c.Assert(m[f1.Name()], Equals, true)
 	// nested file
 	pats = []string{dir + "/*/*123XX123*"}
-	m, err = glob(pats, []*regexp.Regexp{}, s.wr, false)
+	a, err = glob(pats, []*regexp.Regexp{}, s.wr, false)
 	c.Assert(err, IsNil)
+	m = s.mkmap(a)
 	c.Assert(m, HasLen, 1)
 	c.Assert(m[f2.Name()], Equals, true)
 	// the whole 9 yards
 	pats = []string{dir + "/**/*"}
-	m, err = glob(pats, []*regexp.Regexp{}, s.wr, false)
+	a, err = glob(pats, []*regexp.Regexp{}, s.wr, false)
 	c.Assert(err, IsNil)
+	m = s.mkmap(a)
 	c.Assert(m, HasLen, 1)
 	c.Assert(m[f2.Name()], Equals, true)
+}
+
+func (s *GlobSuite) mkmap(a []string) map[string]bool {
+	m := map[string]bool{}
+	for _, v := range a {
+		m[v] = true
+	}
+	return m
 }
