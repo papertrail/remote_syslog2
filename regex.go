@@ -20,22 +20,19 @@ func (self *RegexCollection) String() string {
 	return fmt.Sprint(*self)
 }
 
-func (self *RegexCollection) SetYAML(tag string, v interface{}) bool {
-	a, ok := v.([]interface{})
-	if !ok {
-		log.Errorf("Expected slice of interface but got %v", v)
-		return false
+func (self *RegexCollection) UnmarshalYAML(
+	unmarshal func(interface{}) error,
+) error {
+	a := []string{}
+	if err := unmarshal(&a); err != nil {
+		return fmt.Errorf("Expected string array: %v", err)
 	}
-	for _, item := range a {
-		s, ok := item.(string)
-		if !ok {
-			log.Errorf("Expected string but got %v", item)
-			return false
+	for _, v := range a {
+		exp, err := regexp.Compile(v)
+		if err != nil {
+			return err
 		}
-		if err := self.Set(s); err != nil {
-			log.Errorf("Error setting regex '%s': %v", s, err)
-			return false
-		}
+		*self = append(*self, exp)
 	}
-	return true
+	return nil
 }

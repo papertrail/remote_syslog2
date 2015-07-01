@@ -136,7 +136,8 @@ func (self *Config) override() error {
 	}
 	self.Severity = v
 	if *refresh != "" {
-		if err := self.RefreshInterval.Set(*refresh); err != nil {
+		err := yaml.Unmarshal([]byte(*refresh), &self.RefreshInterval)
+		if err != nil {
 			return err
 		}
 	}
