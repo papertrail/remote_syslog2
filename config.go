@@ -60,7 +60,6 @@ func NewConfig() (*Config, error) {
 		ConfigFile:      DEFAULT_CONFIG_FILE,
 		ExcludeFiles:    RegexCollection{},
 		ExcludePatterns: RegexCollection{},
-		DestHost:        "localhost",
 	}
 	if err := self.load(); err != nil {
 		return nil, err
