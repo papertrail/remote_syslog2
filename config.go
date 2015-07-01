@@ -57,7 +57,6 @@ type configfile struct {
 
 func NewConfig() (*Config, error) {
 	self := &Config{
-		ConfigFile:      DEFAULT_CONFIG_FILE,
 		ExcludeFiles:    RegexCollection{},
 		ExcludePatterns: RegexCollection{},
 	}
