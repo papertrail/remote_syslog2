@@ -25,6 +25,13 @@ func (s *ConfigSuite) TestOverride(c *C) {
 		DestHost:        "localhost",
 	}
 	c.Assert(config.load(), IsNil)
+	c.Assert(config.Files, HasLen, 1)
+	c.Assert(config.Files[0], Equals, "locallog.txt")
+	c.Assert(config.DestHost, Equals, "logs.papertrailapp.com")
+	c.Assert(config.DestPort, Equals, 514)
+	c.Assert(config.Protocol, Equals, "tls")
+	c.Assert(config.Hostname, Equals, "test-host-from-config")
+	c.Assert(config.RefreshInterval, Equals, RefreshInterval(30*time.Second))
 	c.Assert(config.validate(), IsNil)
 	// fudge the args
 	os.Args = os.Args[0:1]
