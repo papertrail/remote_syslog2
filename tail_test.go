@@ -34,8 +34,8 @@ func (s *TailSuite) TearDownTest(c *C) {
 	os.RemoveAll(s.tempdir)
 }
 
-func (s *TailSuite) TestSimple(c *C) {
-	dir, err := ioutil.TempDir("", "TailSimple")
+func (s *TailSuite) TestOne(c *C) {
+	dir, err := ioutil.TempDir("", "TailOne")
 	c.Assert(err, IsNil)
 	s.tempdir = dir
 	f, err := ioutil.TempFile(s.tempdir, "")
@@ -47,7 +47,7 @@ four
 `
 	c.Assert(ioutil.WriteFile(f.Name(), []byte(`start`), os.ModePerm), IsNil)
 	pats := []*regexp.Regexp{regexp.MustCompile("three")}
-	go tailone(
+	go tailFile(
 		f.Name(),
 		pats,
 		syslog.SevNotice,
@@ -64,6 +64,53 @@ four
 	c.Assert(p.Message, Equals, `two`)
 	p = s.packet(f, c)
 	c.Assert(p.Message, Equals, `four`)
+	select {
+	case err := <-s.logger.Errors():
+		c.Fatalf("Got errors: %v", err)
+	default:
+	}
+}
+
+func (s *TailSuite) TestMany(c *C) {
+	dir, err := ioutil.TempDir("", "TailMany")
+	c.Assert(err, IsNil)
+	s.tempdir = dir
+	f, err := ioutil.TempFile(s.tempdir, "")
+	c.Assert(err, IsNil)
+	data := `one
+two
+three
+four
+`
+	c.Assert(ioutil.WriteFile(f.Name(), []byte(`start`), os.ModePerm), IsNil)
+	config := &Config{
+		Files:           []string{f.Name()},
+		ExcludeFiles:    RegexCollection{},
+		ExcludePatterns: RegexCollection{regexp.MustCompile("three")},
+		RefreshInterval: RefreshInterval(100 * time.Second),
+		Severity:        syslog.SevNotice,
+		Facility:        syslog.LogLocal4,
+		Poll:            false,
+	}
+	go tailFiles(
+		config,
+		s.logger,
+		s.wr,
+		true,
+	)
+	time.Sleep(1 * time.Second)
+	s.append(f.Name(), data, c)
+	p := s.packet(f, c)
+	c.Assert(p.Message, Equals, `one`)
+	p = s.packet(f, c)
+	c.Assert(p.Message, Equals, `two`)
+	p = s.packet(f, c)
+	c.Assert(p.Message, Equals, `four`)
+	select {
+	case err := <-s.logger.Errors():
+		c.Fatalf("Got errors: %v", err)
+	default:
+	}
 }
 
 func (s *TailSuite) packet(f *os.File, c *C) *syslog.Packet {

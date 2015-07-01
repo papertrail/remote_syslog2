@@ -11,7 +11,7 @@ import (
 )
 
 // Tails a single file
-func tailone(
+func tailFile(
 	file string,
 	exclusions []*regexp.Regexp,
 	severity syslog.Priority,
@@ -51,3 +51,31 @@ func tailone(
 	}
 	log.Errorf("Tail worker executed abnormally")
 }
+
+func tailFiles(
+	config *Config, 
+	logger syslog.Logger, 
+	wr *WorkerRegistry, 
+	warn bool,
+) {
+	for {
+		files, err := glob(config.Files, config.ExcludeFiles, wr, warn)
+		if err == nil {
+			for _, file := range files {
+				log.Infof("Forwarding %s", file)
+				go tailFile(
+					file,
+					config.ExcludePatterns,
+					config.Severity,
+					config.Facility,
+					config.Poll,
+					logger,
+					wr,
+				)
+			}
+		}
+		time.Sleep(time.Duration(config.RefreshInterval))
+		warn = false
+	}
+}
+

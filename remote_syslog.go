@@ -4,7 +4,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/howbazaar/loggo"
 	"github.com/papertrail/remote_syslog2/syslog"
@@ -44,26 +43,8 @@ func main() {
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", config.RefreshInterval)
 	warn := true
-	for {
-		files, err := glob(config.Files, config.ExcludeFiles, wr, warn)
-		if err == nil {
-			for _, file := range files {
-				log.Infof("Forwarding %s", file)
-				go tailone(
-					file,
-					config.ExcludePatterns,
-					config.Severity,
-					config.Facility,
-					config.Poll,
-					logger,
-					wr,
-				)
-				for err = range logger.Errors() {
-					log.Errorf("Syslog error: %v", err)
-				}
-			}
-		}
-		time.Sleep(time.Duration(config.RefreshInterval))
-		warn = false
+	go tailFiles(config, logger, wr, warn)
+	for err = range logger.Errors() {
+		log.Errorf("Syslog error: %v", err)
 	}
 }
