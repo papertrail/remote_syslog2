@@ -19,6 +19,7 @@ import (
 const (
 	MinimumRefreshInterval = (time.Duration(10) * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
+	DefaultPort            = 514
 )
 
 var defaultConfigDoesNotExist = fmt.Errorf("Default configuration file '%s' does not exist", DefaultConfigFile)
@@ -38,6 +39,7 @@ type ConfigFile struct {
 }
 
 func (cf ConfigFile) printValidationWarnings() {
+	// Files section could be malformed
 	if len(cf.Files) == 0 {
 		log.Warningf("Validation: configuration file contains no files to watch")
 	}
@@ -262,7 +264,7 @@ func (cm ConfigManager) DestPort() int {
 	case cm.Config.Destination.Port != 0:
 		return cm.Config.Destination.Port
 	default:
-		return 514
+		return DefaultPort
 	}
 }
 
