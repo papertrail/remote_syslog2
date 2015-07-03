@@ -57,6 +57,7 @@ type configfile struct {
 
 func NewConfig() (*Config, error) {
 	self := &Config{
+		ConfigFile:      DEFAULT_CONFIG_FILE,
 		ExcludeFiles:    RegexCollection{},
 		ExcludePatterns: RegexCollection{},
 	}
@@ -100,7 +101,7 @@ func (self *Config) load() error {
 }
 
 func (self *Config) override() error {
-	configfile := pflag.StringP("configfile", "c", DEFAULT_CONFIG_FILE, "Path to config")
+	configfile := pflag.StringP("configfile", "c", "", "Path to config")
 	desthost := pflag.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
 	destport := pflag.IntP("dest-port", "p", 0, "Destination syslog port")
 	logfile := pflag.String("debug-log-cfg", "", "the debug log file")
