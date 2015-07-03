@@ -110,7 +110,7 @@ func (self *Config) override() error {
 	severity := pflag.StringP("severity", "s", "notice", "Severity")
 	refresh := pflag.String("new-file-check-interval", "", "How often to check for new files")
 	//
-	pflag.StringVar(&self.Hostname, "hostname", "", "Local hostname to send from")
+	hostname := pflag.String("hostname", "", "Local hostname to send from")
 	pflag.StringVar(&self.PidFile, "pid-file", "", "Location of the PID file")
 	// --strip-color
 	pflag.BoolVar(&self.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
@@ -153,6 +153,9 @@ func (self *Config) override() error {
 	}
 	if *logfile != "" {
 		self.DebugLogFile = *logfile
+	}
+	if *hostname != "" {
+		self.Hostname = *hostname
 	}
 	return nil
 }
