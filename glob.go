@@ -39,7 +39,7 @@ func glob(
 			case fi.IsDir():
 				log.Debugf("Skipping '%s', use '<dir>/*' to tail files", file)
 			default:
-			a = append(a, file)
+				a = append(a, file)
 			}
 		}
 	}
