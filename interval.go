@@ -12,10 +12,6 @@ func (self RefreshInterval) String() string {
 	return time.Duration(self).String()
 }
 
-type Unmarshaler interface {
-	UnmarshalYAML(unmarshal func(interface{}) error) error
-}
-
 func (self *RefreshInterval) UnmarshalYAML(
 	unmarshal func(interface{}) error,
 ) error {

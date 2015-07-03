@@ -7,15 +7,6 @@ import (
 
 type RegexCollection []*regexp.Regexp
 
-func (self *RegexCollection) Set(v string) error {
-	exp, err := regexp.Compile(v)
-	if err != nil {
-		return err
-	}
-	*self = append(*self, exp)
-	return nil
-}
-
 func (self *RegexCollection) String() string {
 	return fmt.Sprint(*self)
 }
