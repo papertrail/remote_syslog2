@@ -58,3 +58,29 @@ func (s *ConfigSuite) TestOverride(c *C) {
 	c.Assert(config.DestPort, Equals, 1111)
 	c.Assert(config.DebugLogFile, Equals, "xxx")
 }
+
+func (s *ConfigSuite) TestConfigFileFlag(c *C) {
+	config := &Config{
+		ConfigFile:      "test/config_with_host.yaml",
+		ExcludeFiles:    RegexCollection{},
+		ExcludePatterns: RegexCollection{},
+		DestHost:        "localhost",
+	}
+	c.Assert(config.load(), IsNil)
+	c.Assert(config.validate(), IsNil)
+	// fudge the args
+	os.Args = os.Args[0:1]
+	args := `-c test/test_config1.yaml`
+	a := strings.Split(args, " ")
+	os.Args = append(os.Args, a...)
+	c.Assert(config.override(), IsNil)
+	c.Assert(config.validate(), IsNil)
+	c.Assert(config.Hostname, Equals, "baz")
+	c.Assert(config.Protocol, Equals, "tcp")
+	c.Assert(config.RefreshInterval, Equals, RefreshInterval(20*time.Second))
+	c.Assert(config.Files, HasLen, 1)
+	c.Assert(config.Files, DeepEquals, []string{"foo.txt"})
+	c.Assert(config.ConfigFile, Equals, "test/test_config1.yaml")
+	c.Assert(config.DestHost, Equals, "bar")
+	c.Assert(config.DestPort, Equals, 515)
+}
