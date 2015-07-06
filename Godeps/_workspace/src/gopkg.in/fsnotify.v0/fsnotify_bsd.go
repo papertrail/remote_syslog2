@@ -39,24 +39,29 @@ type FileEvent struct {
 	create bool   // set by fsnotify package if found new file
 }
 
-// IsCreate reports whether the FileEvent was triggerd by a creation
+// IsCreate reports whether the FileEvent was triggered by a creation
 func (e *FileEvent) IsCreate() bool { return e.create }
 
-// IsDelete reports whether the FileEvent was triggerd by a delete
+// IsDelete reports whether the FileEvent was triggered by a delete
 func (e *FileEvent) IsDelete() bool { return (e.mask & sys_NOTE_DELETE) == sys_NOTE_DELETE }
 
-// IsModify reports whether the FileEvent was triggerd by a file modification
+// IsModify reports whether the FileEvent was triggered by a file modification
 func (e *FileEvent) IsModify() bool {
 	return ((e.mask&sys_NOTE_WRITE) == sys_NOTE_WRITE || (e.mask&sys_NOTE_ATTRIB) == sys_NOTE_ATTRIB)
 }
 
-// IsRename reports whether the FileEvent was triggerd by a change name
+// IsRename reports whether the FileEvent was triggered by a change name
 func (e *FileEvent) IsRename() bool { return (e.mask & sys_NOTE_RENAME) == sys_NOTE_RENAME }
+
+// IsAttrib reports whether the FileEvent was triggered by a change in the file metadata.
+func (e *FileEvent) IsAttrib() bool {
+	return (e.mask & sys_NOTE_ATTRIB) == sys_NOTE_ATTRIB
+}
 
 type Watcher struct {
 	mu              sync.Mutex          // Mutex for the Watcher itself.
 	kq              int                 // File descriptor (as returned by the kqueue() syscall)
-	watches         map[string]int      // Map of watched file diescriptors (key: path)
+	watches         map[string]int      // Map of watched file descriptors (key: path)
 	wmut            sync.Mutex          // Protects access to watches.
 	fsnFlags        map[string]uint32   // Map of watched files to flags used for filter
 	fsnmut          sync.Mutex          // Protects access to fsnFlags.
@@ -66,16 +71,14 @@ type Watcher struct {
 	finfo           map[int]os.FileInfo // Map of file information (isDir, isReg; key: watch descriptor)
 	pmut            sync.Mutex          // Protects access to paths and finfo.
 	fileExists      map[string]bool     // Keep track of if we know this file exists (to stop duplicate create events)
-	femut           sync.Mutex          // Proctects access to fileExists.
+	femut           sync.Mutex          // Protects access to fileExists.
 	externalWatches map[string]bool     // Map of watches added by user of the library.
-	ewmut           sync.Mutex          // Protects access to internalWatches.
+	ewmut           sync.Mutex          // Protects access to externalWatches.
 	Error           chan error          // Errors are sent on this channel
 	internalEvent   chan *FileEvent     // Events are queued on this channel
 	Event           chan *FileEvent     // Events are returned on this channel
 	done            chan bool           // Channel for sending a "quit message" to the reader goroutine
 	isClosed        bool                // Set to true when Close() is first called
-	kbuf            [1]syscall.Kevent_t // An event buffer for Add/Remove watch
-	bufmut          sync.Mutex          // Protects access to kbuf.
 }
 
 // NewWatcher creates and returns a new kevent instance using kqueue(2)
@@ -118,9 +121,9 @@ func (w *Watcher) Close() error {
 
 	// Send "quit" message to the reader goroutine
 	w.done <- true
-	w.pmut.Lock()
+	w.wmut.Lock()
 	ws := w.watches
-	w.pmut.Unlock()
+	w.wmut.Unlock()
 	for path := range ws {
 		w.removeWatch(path)
 	}
@@ -202,15 +205,13 @@ func (w *Watcher) addWatch(path string, flags uint32) error {
 	w.enFlags[path] = flags
 	w.enmut.Unlock()
 
-	w.bufmut.Lock()
-	watchEntry := &w.kbuf[0]
+	var kbuf [1]syscall.Kevent_t
+	watchEntry := &kbuf[0]
 	watchEntry.Fflags = flags
 	syscall.SetKevent(watchEntry, watchfd, syscall.EVFILT_VNODE, syscall.EV_ADD|syscall.EV_CLEAR)
 	entryFlags := watchEntry.Flags
-	w.bufmut.Unlock()
-
-	wd, errno := syscall.Kevent(w.kq, w.kbuf[:], nil, nil)
-	if wd == -1 {
+	success, errno := syscall.Kevent(w.kq, kbuf[:], nil, nil)
+	if success == -1 {
 		return errno
 	} else if (entryFlags & syscall.EV_ERROR) == syscall.EV_ERROR {
 		return errors.New("kevent add error")
@@ -241,16 +242,16 @@ func (w *Watcher) removeWatch(path string) error {
 	if !ok {
 		return errors.New(fmt.Sprintf("can't remove non-existent kevent watch for: %s", path))
 	}
-	w.bufmut.Lock()
-	watchEntry := &w.kbuf[0]
+	var kbuf [1]syscall.Kevent_t
+	watchEntry := &kbuf[0]
 	syscall.SetKevent(watchEntry, watchfd, syscall.EVFILT_VNODE, syscall.EV_DELETE)
-	success, errno := syscall.Kevent(w.kq, w.kbuf[:], nil, nil)
+	entryFlags := watchEntry.Flags
+	success, errno := syscall.Kevent(w.kq, kbuf[:], nil, nil)
 	if success == -1 {
 		return os.NewSyscallError("kevent_rm_watch", errno)
-	} else if (watchEntry.Flags & syscall.EV_ERROR) == syscall.EV_ERROR {
+	} else if (entryFlags & syscall.EV_ERROR) == syscall.EV_ERROR {
 		return errors.New("kevent rm error")
 	}
-	w.bufmut.Unlock()
 	syscall.Close(watchfd)
 	w.wmut.Lock()
 	delete(w.watches, path)
@@ -266,24 +267,24 @@ func (w *Watcher) removeWatch(path string) error {
 
 	// Find all watched paths that are in this directory that are not external.
 	if fInfo.IsDir() {
-		pathsToRemove := make([]string, 0)
+		var pathsToRemove []string
 		w.pmut.Lock()
 		for _, wpath := range w.paths {
 			wdir, _ := filepath.Split(wpath)
 			if filepath.Clean(wdir) == filepath.Clean(path) {
 				w.ewmut.Lock()
-				if _, extern := w.externalWatches[wpath]; !extern {
+				if !w.externalWatches[wpath] {
 					pathsToRemove = append(pathsToRemove, wpath)
 				}
 				w.ewmut.Unlock()
 			}
 		}
 		w.pmut.Unlock()
-		for idx := 0; idx < len(pathsToRemove); idx++ {
-			// Since these are internal, not much sense in propogating error
+		for _, p := range pathsToRemove {
+			// Since these are internal, not much sense in propagating error
 			// to the user, as that will just confuse them with an error about
 			// a path they did not explicitly watch themselves.
-			w.removeWatch(pathsToRemove[idx])
+			w.removeWatch(p)
 		}
 	}
 
@@ -340,7 +341,7 @@ func (w *Watcher) readEvents() {
 			}
 		}
 
-		// Flush the events we recieved to the events channel
+		// Flush the events we received to the events channel
 		for len(events) > 0 {
 			fileEvent := new(FileEvent)
 			watchEvent := &events[0]
@@ -360,6 +361,13 @@ func (w *Watcher) readEvents() {
 				}
 			}
 
+			if fileEvent.IsRename() {
+				w.removeWatch(fileEvent.Name)
+				w.femut.Lock()
+				delete(w.fileExists, fileEvent.Name)
+				w.femut.Unlock()
+			}
+
 			if fileInfo != nil && fileInfo.IsDir() && fileEvent.IsModify() && !fileEvent.IsDelete() {
 				w.sendDirectoryChangeEvents(fileEvent.Name)
 			} else {
@@ -370,12 +378,6 @@ func (w *Watcher) readEvents() {
 			// Move to next event
 			events = events[1:]
 
-			if fileEvent.IsRename() {
-				w.removeWatch(fileEvent.Name)
-				w.femut.Lock()
-				delete(w.fileExists, fileEvent.Name)
-				w.femut.Unlock()
-			}
 			if fileEvent.IsDelete() {
 				w.removeWatch(fileEvent.Name)
 				w.femut.Lock()
@@ -430,7 +432,7 @@ func (w *Watcher) watchDirectoryFiles(dirPath string) error {
 				return e
 			}
 		} else {
-			// If the user is currently waching directory
+			// If the user is currently watching directory
 			// we want to preserve the flags used
 			w.enmut.Lock()
 			currFlags, found := w.enFlags[filePath]
@@ -456,7 +458,7 @@ func (w *Watcher) watchDirectoryFiles(dirPath string) error {
 
 // sendDirectoryEvents searches the directory for newly created files
 // and sends them over the event channel. This functionality is to have
-// the BSD version of fsnotify mach linux fsnotify which provides a
+// the BSD version of fsnotify match linux fsnotify which provides a
 // create event for files created in a watched directory.
 func (w *Watcher) sendDirectoryChangeEvents(dirPath string) {
 	// Get all files
@@ -487,9 +489,28 @@ func (w *Watcher) sendDirectoryChangeEvents(dirPath string) {
 			fileEvent.create = true
 			w.internalEvent <- fileEvent
 		}
+
+		// watchDirectoryFiles (but without doing another ReadDir)
+		if fileInfo.IsDir() == false {
+			// Watch file to mimic linux fsnotify
+			w.addWatch(filePath, sys_NOTE_ALLEVENTS)
+		} else {
+			// If the user is currently watching directory
+			// we want to preserve the flags used
+			w.enmut.Lock()
+			currFlags, found := w.enFlags[filePath]
+			w.enmut.Unlock()
+			var newFlags uint32 = syscall.NOTE_DELETE
+			if found {
+				newFlags |= currFlags
+			}
+
+			// Linux gives deletes if not explicitly watching
+			w.addWatch(filePath, newFlags)
+		}
+
 		w.femut.Lock()
 		w.fileExists[filePath] = true
 		w.femut.Unlock()
 	}
-	w.watchDirectoryFiles(dirPath)
 }

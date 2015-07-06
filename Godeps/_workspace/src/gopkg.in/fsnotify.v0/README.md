@@ -1,21 +1,20 @@
 # File system notifications for Go
 
-[![Build Status](https://goci.herokuapp.com/project/image/github.com/howeyc/fsnotify)](http://goci.me/project/github.com/howeyc/fsnotify) [![GoDoc](https://godoc.org/github.com/howeyc/fsnotify?status.png)](http://godoc.org/github.com/howeyc/fsnotify)
+[![GoDoc](https://godoc.org/gopkg.in/fsnotify.v0?status.svg)](https://godoc.org/gopkg.in/fsnotify.v0)
 
-Cross platform, works on:
-* Windows
-* Linux
-* BSD
-* OSX
+This branch contains **[fsnotify.v0](https://gopkg.in/fsnotify.v0)** which is API-compatible with [howeyc/fsnotify](https://github.com/howeyc/fsnotify). Bugfixes *may* be backported, but I recommend upgrading.
 
-Example:
+Cross platform: Windows, Linux, BSD and OS X.
+
+## Example:
+
 ```go
 package main
 
 import (
 	"log"
 
-	"github.com/howeyc/fsnotify"
+	"gopkg.in/fsnotify.v0"
 )
 
 func main() {
@@ -51,13 +50,14 @@ func main() {
 ```
 
 For each event:
+
 * Name
 * IsCreate()
 * IsDelete()
 * IsModify()
 * IsRename()
 
-### FAQ
+## FAQ
 
 **When a file is moved to another directory is it still being watched?**
 

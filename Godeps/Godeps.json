@@ -4,7 +4,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/ActiveState/tail",
-			"Rev": "c86531131426fb939fe8627ffa57a3c649f04cd4"
+			"Comment": "v0-10-g4b368d1",
+			"Rev": "4b368d1590196ade29993d6a0896591403180bbd"
 		},
 		{
 			"ImportPath": "github.com/VividCortex/godaemon",
@@ -13,10 +14,6 @@
 		{
 			"ImportPath": "github.com/howbazaar/loggo",
 			"Rev": "384be41088235af6d26ba66786fd23c45b2d5311"
-		},
-		{
-			"ImportPath": "github.com/howeyc/fsnotify",
-			"Rev": "7f0625dbb54fef2cfba674bc0dfc6c37d34bad27"
 		},
 		{
 			"ImportPath": "github.com/leonsodhi/lockfile",
@@ -29,6 +26,11 @@
 		{
 			"ImportPath": "gopkg.in/check.v1",
 			"Rev": "8d49746f13e4c654088c52685541fcf4cbc8fa59"
+		},
+		{
+			"ImportPath": "gopkg.in/fsnotify.v0",
+			"Comment": "v0.9.3",
+			"Rev": "ea925a0a47d225b2ca7f9932b01d2ed4f3ec74f6"
 		},
 		{
 			"ImportPath": "gopkg.in/tomb.v1",

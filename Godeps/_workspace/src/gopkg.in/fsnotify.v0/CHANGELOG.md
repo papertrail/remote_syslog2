@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.9.3 / 2014-12-31
+
+* kqueue: cleanup internal watch before sending remove event [#51](https://github.com/go-fsnotify/fsnotify/issues/51)
+
+## v0.9.2 / 2014-08-17
+
+* [Backport] Fix missing create events on OS X. [#14](https://github.com/go-fsnotify/fsnotify/issues/14) (thanks @zhsso)
+
+## v0.9.1 / 2014-06-12
+
+* Fix data race on kevent buffer (thanks @tilaks) [#98](https://github.com/howeyc/fsnotify/pull/98)
+
+## v0.9.0 / 2014-01-17
+
+* IsAttrib() for events that only concern a file's metadata [#79][] (thanks @abustany)
+* [Fix] kqueue: fix deadlock [#77][] (thanks @cespare)
+* [NOTICE] Development has moved to `code.google.com/p/go.exp/fsnotify` in preparation for inclusion in the Go standard library.
+
 ## v0.8.12 / 2013-11-13
 
 * [API] Remove FD_SET and friends from Linux adapter
@@ -133,6 +151,8 @@
 * linux: common FileEvent functions
 * initial commit
 
+[#79]: https://github.com/howeyc/fsnotify/pull/79
+[#77]: https://github.com/howeyc/fsnotify/pull/77
 [#72]: https://github.com/howeyc/fsnotify/issues/72
 [#71]: https://github.com/howeyc/fsnotify/issues/71
 [#70]: https://github.com/howeyc/fsnotify/issues/70
