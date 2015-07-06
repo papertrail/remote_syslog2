@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -33,8 +34,6 @@ type Config struct {
 	LogLevels       string
 	DebugLogFile    string
 	PidFile         string
-	UseTCP          bool
-	UseTLS          bool
 	Daemonize       bool
 	Severity        syslog.Priority
 	Facility        syslog.Priority
@@ -101,25 +100,39 @@ func (self *Config) load() error {
 }
 
 func (self *Config) override() error {
-	configfile := pflag.StringP("configfile", "c", "", "Path to config")
-	desthost := pflag.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
-	destport := pflag.IntP("dest-port", "p", 0, "Destination syslog port")
-	logfile := pflag.String("debug-log-cfg", "", "the debug log file")
-	foreground := pflag.BoolP("no-detach", "D", false, "Don't daemonize and detach from the terminal")
-	facility := pflag.StringP("facility", "f", "user", "Facility")
-	severity := pflag.StringP("severity", "s", "notice", "Severity")
-	refresh := pflag.String("new-file-check-interval", "", "How often to check for new files")
+	// creating a new flag set allows for calling
+	// this method multiple times, e.g. during testing
+	flags := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
+	configfile := flags.StringP("configfile", "c", "", "Path to config")
+	desthost := flags.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
+	destport := flags.IntP("dest-port", "p", 0, "Destination syslog port")
+	logfile := flags.String("debug-log-cfg", "", "the debug log file")
+	foreground := flags.BoolP("no-detach", "D", false, "Don't daemonize and detach from the terminal")
+	facility := flags.StringP("facility", "f", "user", "Facility")
+	severity := flags.StringP("severity", "s", "notice", "Severity")
+	refresh := flags.String("new-file-check-interval", "", "How often to check for new files")
 	//
-	hostname := pflag.String("hostname", "", "Local hostname to send from")
-	pflag.StringVar(&self.PidFile, "pid-file", "", "Location of the PID file")
+	hostname := flags.String("hostname", "", "Local hostname to send from")
+	pidfile := flags.String("pid-file", "", "Location of the PID file")
 	// --strip-color
-	pflag.BoolVar(&self.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
-	pflag.BoolVar(&self.UseTLS, "tls", false, "Connect via TCP with TLS")
-	pflag.BoolVar(&self.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.StringVar(&self.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
-	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
-	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
-	pflag.Parse()
+	poll := flags.Bool("poll", false, "Detect changes by polling instead of inotify")
+	loglevels := flags.String("log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	_ = flags.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
+	_ = flags.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
+	// work around the fact that we can't tell if a bool flag was set
+	tcp := flags.Bool("tcp", false, "Connect via TCP (no TLS)")
+	tls := flags.Bool("tls", true, "Connect via TCP with TLS")
+	tcpExists := self.boolFlagExists("--tcp", os.Args)
+	tlsExists := self.boolFlagExists("--tls", os.Args)
+	// parse
+	flags.Parse(os.Args[1:])
+	// reload config file if needed
+	if *configfile != "" {
+		self.ConfigFile = *configfile
+		if err := self.load(); err != nil {
+			return err
+		}
+	}
 	// set
 	if utils.CanDaemonize {
 		self.Daemonize = !*foreground
@@ -140,10 +153,24 @@ func (self *Config) override() error {
 			return err
 		}
 	}
-	self.Files = append(self.Files, pflag.Args()...)
+	if *pidfile != "" {
+		self.PidFile = *pidfile
+	}
+	self.Poll = *poll
+	if *loglevels != "" {
+		self.LogLevels = *loglevels
+	}
+	self.Files = append(self.Files, flags.Args()...)
 	// override
-	if *configfile != "" {
-		self.ConfigFile = *configfile
+	switch {
+	case tlsExists && *tls == true:
+		self.Protocol = "tls"
+	case tcpExists && *tcp == true:
+		self.Protocol = "tcp"
+	case self.Protocol != "":
+		// already set
+	default:
+		self.Protocol = "udp"
 	}
 	if *desthost != "" {
 		self.DestHost = *desthost
@@ -176,17 +203,6 @@ func (self *Config) validate() error {
 	// destination port
 	if self.DestPort == 0 {
 		self.DestPort = 514
-	}
-	// protocol
-	if self.Protocol == "" {
-		switch {
-		case self.UseTLS:
-			self.Protocol = "tls"
-		case self.UseTCP:
-			self.Protocol = "tcp"
-		default:
-			self.Protocol = "udp"
-		}
 	}
 	// root CAs
 	if self.Protocol == "tls" &&
@@ -231,4 +247,13 @@ func (self *Config) defaultPidFile() string {
 		return f
 	}
 	return "/tmp/remote_syslog.pid"
+}
+
+func (self *Config) boolFlagExists(flag string, args []string) bool {
+	for _, v := range args {
+		if strings.HasPrefix(v, flag) {
+			return true
+		}
+	}
+	return false
 }
