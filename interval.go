@@ -14,7 +14,12 @@ func (self RefreshInterval) String() string {
 
 func (self *RefreshInterval) UnmarshalYAML(
 	unmarshal func(interface{}) error,
-) error {
+) (e error) {
+	defer func() {
+		if *self < MIN_REFRESH_INTERVAL {
+			e = fmt.Errorf("Refresh interval must be greater than or equal to %s", MIN_REFRESH_INTERVAL)
+		}
+	}()
 	i := 0
 	if err := unmarshal(&i); err == nil {
 		*self = RefreshInterval(time.Duration(i) * time.Second)
@@ -31,11 +36,7 @@ func (self *RefreshInterval) UnmarshalYAML(
 		if err != nil {
 			return err
 		}
-		ii := RefreshInterval(d)
-		if ii < MIN_REFRESH_INTERVAL {
-			return fmt.Errorf("Refresh interval must be greater than or equal to %s", MIN_REFRESH_INTERVAL)
-		}
-		*self = ii
+		*self = RefreshInterval(d)
 		return nil
 	}
 	return fmt.Errorf("Invalid refresh interval: %s", s)
