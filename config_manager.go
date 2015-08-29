@@ -53,6 +53,7 @@ type ConfigManager struct {
 		Severity        string
 		Facility        string
 		Poll            bool
+		Rewind          bool
 	}
 }
 
@@ -171,6 +172,7 @@ func (cm *ConfigManager) parseFlags() {
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	pflag.BoolVar(&cm.Flags.Rewind, "rewind", false, "Rewind files before starting tail")
 	pflag.Parse()
 	cm.FlagFiles = pflag.Args()
 }
@@ -352,4 +354,8 @@ func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
 
 func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 	return *cm.Config.ExcludePatterns
+}
+
+func (cm *ConfigManager) Rewind() bool {
+	return cm.Flags.Rewind
 }
