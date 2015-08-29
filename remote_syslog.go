@@ -18,10 +18,14 @@ import (
 var log = loggo.GetLogger("")
 
 // Tails a single file
-func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, severity syslog.Priority, facility syslog.Priority, poll bool) {
+func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, severity syslog.Priority, facility syslog.Priority, poll bool, rewind bool) {
 	defer wr.Remove(file)
 	wr.Add(file)
-	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, os.SEEK_END}}
+	whence := os.SEEK_END
+	if rewind {
+		whence = os.SEEK_SET
+	}
+	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, whence}}
 
 	t, err := tail.TailFile(file, tailConfig)
 
@@ -52,19 +56,19 @@ func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logge
 
 // Tails files speficied in the globs and re-evaluates the globs
 // at the specified interval
-func tailFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, interval RefreshInterval, logger *syslog.Logger, severity syslog.Priority, facility syslog.Priority, poll bool) {
+func tailFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, interval RefreshInterval, logger *syslog.Logger, severity syslog.Priority, facility syslog.Priority, poll bool, rewind bool) {
 	wr := NewWorkerRegistry()
 	log.Debugf("Evaluating globs every %s", interval.Duration)
 	logMissingFiles := true
 	for {
-		globFiles(globs, excludedFiles, excludePatterns, logger, &wr, logMissingFiles, severity, facility, poll)
+		globFiles(globs, excludedFiles, excludePatterns, logger, &wr, logMissingFiles, severity, facility, poll, rewind)
 		time.Sleep(interval.Duration)
 		logMissingFiles = false
 	}
 }
 
 //
-func globFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, logMissingFiles bool, severity syslog.Priority, facility syslog.Priority, poll bool) {
+func globFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, logMissingFiles bool, severity syslog.Priority, facility syslog.Priority, poll bool, rewind bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range globs {
 
@@ -84,7 +88,7 @@ func globFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns [
 				log.Debugf("Skipping %s because it is excluded by regular expression", file)
 			default:
 				log.Infof("Forwarding %s", file)
-				go tailOne(file, excludePatterns, logger, wr, severity, facility, poll)
+				go tailOne(file, excludePatterns, logger, wr, severity, facility, poll, rewind)
 			}
 		}
 	}
@@ -119,7 +123,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll())
+	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll(), cm.Rewind())
 
 	for err = range logger.Errors {
 		log.Errorf("Syslog error: %v", err)
