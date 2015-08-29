@@ -358,5 +358,5 @@ func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 }
 
 func (cm *ConfigManager) Rewind() bool {
-	return cm.Flags.Rewind
+	return cm.Flags.Rewind || cm.Config.Rewind
 }
