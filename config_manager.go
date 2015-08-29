@@ -29,6 +29,7 @@ type ConfigFile struct {
 		Protocol string `yaml:"protocol"`
 	}
 	Hostname string `yaml:"hostname"`
+	Rewind   bool   `yaml:"rewind_before_tail"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
