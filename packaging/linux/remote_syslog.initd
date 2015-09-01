@@ -87,9 +87,13 @@ stop(){
 status(){
   if (is_running); then
     echo "Running"
+    RETVAL=0
   else
     echo "Not running"
+    RETVAL=3
   fi
+  
+  return $RETVAL
 }
 
 reload(){
