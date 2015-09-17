@@ -105,7 +105,7 @@ or by creating a link manually:
 
 remote_syslog will daemonize by default.
 
-Additional information about init files (`init.d`, `supervisor`, `systemd` and `upstart`) are 
+Additional information about init files (`init.d`, `supervisor`, `systemd` and `upstart`) are
 available [in the examples directory](examples/).
 
 
@@ -245,7 +245,8 @@ symbolic link to the generically-named file:
     cd /path/to/logs
     ln -s generic_name.log unique_name.log
 
-Point remote_syslog at unique_name.log. It will use that as the program name.
+Point `remote_syslog` at `unique_name.log`. `remote_syslog` will send its
+contents with the program name `unique_name.log`.
 
 
 ## Troubleshooting
