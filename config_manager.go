@@ -13,11 +13,11 @@ import (
 	"github.com/papertrail/remote_syslog2/papertrail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
-	"launchpad.net/goyaml"
+	"gopkg.in/yaml.v2"
 )
 
 const (
-	MinimumRefreshInterval = (time.Duration(10) * time.Second)
+	MinimumRefreshInterval = RefreshInterval(10 * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
@@ -28,11 +28,10 @@ type ConfigFile struct {
 		Port     int    `yaml:"port"`
 		Protocol string `yaml:"protocol"`
 	}
-	Hostname string `yaml:"hostname"`
-	//SetYAML is only called on pointers
-	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
-	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
-	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
+	Hostname        string          `yaml:"hostname"`
+	RefreshInterval RefreshInterval `yaml:"new_file_check_interval"`
+	ExcludeFiles    RegexCollection `yaml:"exclude_files"`
+	ExcludePatterns RegexCollection `yaml:"exclude_patterns"`
 }
 
 type ConfigManager struct {
@@ -56,99 +55,23 @@ type ConfigManager struct {
 	}
 }
 
-type RefreshInterval struct {
-	Duration time.Duration
-}
-
-func (r *RefreshInterval) String() string {
-	return fmt.Sprint(*r)
-}
-
-func (r *RefreshInterval) Set(value string) error {
-	d, err := time.ParseDuration(value)
-
-	if err != nil {
-		return err
+func NewConfigManager() (*ConfigManager, error) {
+	cm := &ConfigManager{
+		Config: ConfigFile{
+			ExcludeFiles:    RegexCollection{},
+			ExcludePatterns: RegexCollection{},
+		},
 	}
-
-	if d < MinimumRefreshInterval {
-		return fmt.Errorf("refresh interval must be greater than %s", MinimumRefreshInterval)
+	if err := cm.parseFlags(); err != nil {
+		return nil, err
 	}
-	r.Duration = d
-	return nil
+	if err := cm.readConfig(); err != nil {
+		return nil, err
+	}
+	return cm, nil
 }
 
-func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
-	err := r.Set(value.(string))
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-type RegexCollection []*regexp.Regexp
-
-func (r *RegexCollection) Set(value string) error {
-	exp, err := regexp.Compile(value)
-	if err != nil {
-		return err
-	}
-	*r = append(*r, exp)
-	return nil
-}
-
-func (r *RegexCollection) String() string {
-	return fmt.Sprint(*r)
-}
-
-func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
-	items, ok := value.([]interface{})
-
-	if !ok {
-		return false
-	}
-
-	for _, item := range items {
-		s, ok := item.(string)
-
-		if !ok {
-			return false
-		}
-
-		err := r.Set(s)
-		if err != nil {
-			panic(fmt.Sprintf("Failed to compile regex expression \"%s\"", s))
-		}
-	}
-
-	return true
-}
-
-func NewConfigManager() ConfigManager {
-	cm := ConfigManager{}
-	err := cm.Initialize()
-
-	if err != nil {
-		log.Criticalf("Failed to configure the application: %s", err)
-		os.Exit(1)
-	}
-
-	return cm
-}
-
-func (cm *ConfigManager) Initialize() error {
-	cm.Config.ExcludeFiles = &RegexCollection{}
-	cm.Config.ExcludePatterns = &RegexCollection{}
-	cm.parseFlags()
-
-	err := cm.readConfig()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (cm *ConfigManager) parseFlags() {
+func (cm *ConfigManager) parseFlags() error {
 	pflag.StringVarP(&cm.Flags.ConfigFile, "configfile", "c", DefaultConfigFile, "Path to config")
 	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
 	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
@@ -166,23 +89,23 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
+	var s string
+	pflag.StringVar(&s, "new-file-check-interval", "10s", "How often to check for new files")
+	if err := cm.Flags.RefreshInterval.Set(s); err != nil {
+		return err
+	}
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	pflag.Parse()
 	cm.FlagFiles = pflag.Args()
+	return nil
 }
 
 func (cm *ConfigManager) readConfig() error {
 	log.Infof("Reading configuration file %s", cm.Flags.ConfigFile)
-	err := cm.loadConfigFile()
-	if err != nil {
-		log.Errorf("%s", err)
-		return err
-	}
-	return nil
+	return cm.loadConfigFile()
 }
 
 func (cm *ConfigManager) loadConfigFile() error {
@@ -194,9 +117,7 @@ func (cm *ConfigManager) loadConfigFile() error {
 	if err != nil {
 		return fmt.Errorf("Could not read the config file: %s", err)
 	}
-
-	err = goyaml.Unmarshal(file, &cm.Config)
-	if err != nil {
+	if err = yaml.Unmarshal(file, &cm.Config); err != nil {
 		return fmt.Errorf("Could not parse the config file: %s", err)
 	}
 	return nil
@@ -218,26 +139,28 @@ func (cm *ConfigManager) Hostname() string {
 	}
 }
 
-func (cm *ConfigManager) RootCAs() *x509.CertPool {
-	if cm.DestProtocol() == "tls" && cm.DestHost() == "logs.papertrailapp.com" {
-		return papertrail.RootCA()
-	} else {
-		return nil
+func (cm *ConfigManager) RootCAs() (*x509.CertPool, error) {
+	host, err := cm.DestHost()
+	if err != nil {
+		return nil, err
 	}
+	if cm.DestProtocol() == "tls" && host == "logs.papertrailapp.com" {
+		return papertrail.RootCA(), nil
+	}
+	return nil, nil
 }
 
-func (cm *ConfigManager) DestHost() string {
+func (cm *ConfigManager) DestHost() (string, error) {
 	switch {
 	case cm.Flags.DestHost != "":
-		return cm.Flags.DestHost
+		return cm.Flags.DestHost, nil
 	case cm.Config.Destination.Host == "":
-		log.Criticalf("No destination hostname specified")
-		os.Exit(1)
+		return "", fmt.Errorf("No destination hostname specified")
 	}
-	return cm.Config.Destination.Host
+	return cm.Config.Destination.Host, nil
 }
 
-func (cm ConfigManager) DestPort() int {
+func (cm *ConfigManager) DestPort() int {
 	switch {
 	case cm.Flags.DestPort != 0:
 		return cm.Flags.DestPort
@@ -261,22 +184,22 @@ func (cm *ConfigManager) DestProtocol() string {
 	}
 }
 
-func (cm *ConfigManager) Severity() syslog.Priority {
+func (cm *ConfigManager) Severity() (syslog.Priority, error) {
 	s, err := syslog.Severity(cm.Flags.Severity)
 	if err != nil {
-		log.Criticalf("%s is not a designated facility", cm.Flags.Severity)
-		os.Exit(1)
+		err := fmt.Errorf("%s is not a designated facility", cm.Flags.Severity)
+		return syslog.SevEmerg, err
 	}
-	return s
+	return s, nil
 }
 
-func (cm *ConfigManager) Facility() syslog.Priority {
+func (cm *ConfigManager) Facility() (syslog.Priority, error) {
 	f, err := syslog.Facility(cm.Flags.Facility)
 	if err != nil {
-		log.Criticalf("%s is not a designated facility", cm.Flags.Facility)
-		os.Exit(1)
+		err := fmt.Errorf("%s is not a designated facility", cm.Flags.Facility)
+		return syslog.SevEmerg, err
 	}
-	return f
+	return f, nil
 }
 
 func (cm *ConfigManager) Poll() bool {
@@ -335,21 +258,19 @@ func (cm *ConfigManager) LogLevels() string {
 }
 
 func (cm *ConfigManager) RefreshInterval() RefreshInterval {
-	switch {
-	case cm.Config.RefreshInterval != nil && cm.Flags.RefreshInterval.Duration != 0:
-		return cm.Flags.RefreshInterval
-	case cm.Config.RefreshInterval != nil:
-		return *cm.Config.RefreshInterval
-	case cm.Flags.RefreshInterval.Duration != 0:
+	if cm.Flags.RefreshInterval != 0 {
 		return cm.Flags.RefreshInterval
 	}
-	return RefreshInterval{Duration: MinimumRefreshInterval}
+	if cm.Config.RefreshInterval != 0 {
+		return cm.Config.RefreshInterval
+	}
+	return MinimumRefreshInterval
 }
 
 func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
-	return *cm.Config.ExcludeFiles
+	return cm.Config.ExcludeFiles
 }
 
 func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
-	return *cm.Config.ExcludePatterns
+	return cm.Config.ExcludePatterns
 }
