@@ -17,24 +17,73 @@ import (
 
 var log = loggo.GetLogger("")
 
+func main() {
+	config, err := NewConfig()
+	if err != nil {
+		log.Criticalf("Cannot initialize config manager: %v", err)
+		os.Exit(1)
+	}
+	// run in the background if asked to
+	if config.Daemonize {
+		utils.Daemonize(config.DebugLogFile, config.PidFile)
+	}
+	// set up logging
+	loggo.ConfigureLoggers(config.LogLevels)
+	// connect to remote syslog
+	host := config.DestHost
+	raddr := net.JoinHostPort(host, strconv.Itoa(config.DestPort))
+	log.Infof("Connecting to %s over %s", raddr, config.Protocol)
+	rootcas := config.RootCAs
+	logger, err := syslog.Dial(
+		config.Hostname,
+		config.Protocol,
+		raddr,
+		rootcas,
+	)
+	if err != nil {
+		log.Criticalf("Cannot connect to server: %v", err)
+		os.Exit(1)
+	}
+	// tail files
+	wr := NewWorkerRegistry()
+	log.Debugf("Evaluating globs every %s", config.RefreshInterval)
+	logMissingFiles := true
+	for {
+		globFiles(config, logger, &wr, logMissingFiles)
+		for err = range logger.Errors {
+			log.Errorf("Syslog error: %v", err)
+		}
+		time.Sleep(time.Duration(config.RefreshInterval))
+		logMissingFiles = false
+	}
+}
+
 // Tails a single file
-func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, severity syslog.Priority, facility syslog.Priority, poll bool) {
+func tailOne(
+	config *Config,
+	file string,
+	logger *syslog.Logger,
+	wr *WorkerRegistry,
+) {
 	defer wr.Remove(file)
 	wr.Add(file)
-	tailConfig := tail.Config{ReOpen: true, Follow: true, MustExist: true, Poll: poll, Location: &tail.SeekInfo{0, os.SEEK_END}}
-
+	tailConfig := tail.Config{
+		ReOpen:    true,
+		Follow:    true,
+		MustExist: true,
+		Poll:      config.Poll,
+		Location:  &tail.SeekInfo{0, os.SEEK_END},
+	}
 	t, err := tail.TailFile(file, tailConfig)
-
 	if err != nil {
 		log.Errorf("%s", err)
 		return
 	}
-
 	for line := range t.Lines {
-		if !matchExps(line.Text, excludePatterns) {
+		if !matchExps(line.Text, config.ExcludePatterns) {
 			logger.Packets <- syslog.Packet{
-				Severity: severity,
-				Facility: facility,
+				Severity: config.Severity,
+				Facility: config.Facility,
 				Time:     time.Now(),
 				Hostname: logger.ClientHostname,
 				Tag:      path.Base(file),
@@ -50,41 +99,32 @@ func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logge
 	log.Errorf("Tail worker executed abnormally")
 }
 
-// Tails files speficied in the globs and re-evaluates the globs
-// at the specified interval
-func tailFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, interval RefreshInterval, logger *syslog.Logger, severity syslog.Priority, facility syslog.Priority, poll bool) {
-	wr := NewWorkerRegistry()
-	log.Debugf("Evaluating globs every %s", interval.Duration)
-	logMissingFiles := true
-	for {
-		globFiles(globs, excludedFiles, excludePatterns, logger, &wr, logMissingFiles, severity, facility, poll)
-		time.Sleep(interval.Duration)
-		logMissingFiles = false
-	}
-}
-
 //
-func globFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, logger *syslog.Logger, wr *WorkerRegistry, logMissingFiles bool, severity syslog.Priority, facility syslog.Priority, poll bool) {
+func globFiles(
+	config *Config,
+	logger *syslog.Logger,
+	wr *WorkerRegistry,
+	logMissingFiles bool,
+) {
 	log.Debugf("Evaluating file globs")
-	for _, glob := range globs {
-
+	for _, glob := range config.Files {
 		files, err := filepath.Glob(utils.ResolvePath(glob))
-
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob, err)
-		} else if files == nil && logMissingFiles {
+			return
+		}
+		if files == nil && logMissingFiles {
 			log.Errorf("Cannot forward %s, it may not exist", glob)
 		}
-
 		for _, file := range files {
 			switch {
 			case wr.Exists(file):
 				log.Debugf("Skipping %s because it is already running", file)
-			case matchExps(file, excludedFiles):
+			case matchExps(file, config.ExcludeFiles):
 				log.Debugf("Skipping %s because it is excluded by regular expression", file)
 			default:
 				log.Infof("Forwarding %s", file)
-				go tailOne(file, excludePatterns, logger, wr, severity, facility, poll)
+				go tailOne(config, file, logger, wr)
 			}
 		}
 	}
@@ -99,29 +139,4 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 		}
 	}
 	return false
-}
-
-func main() {
-	cm := NewConfigManager()
-
-	if cm.Daemonize() {
-		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
-	}
-
-	loggo.ConfigureLoggers(cm.LogLevels())
-
-	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
-	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
-
-	if err != nil {
-		log.Criticalf("Cannot connect to server: %v", err)
-		os.Exit(1)
-	}
-
-	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll())
-
-	for err = range logger.Errors {
-		log.Errorf("Syslog error: %v", err)
-	}
 }
