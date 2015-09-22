@@ -114,11 +114,11 @@ func handle(conn io.ReadCloser, messages chan string) {
 	}
 }
 
-func generatePackets() []Packet {
-	packets := make([]Packet, 10)
+func generatePackets() []*Packet {
+	packets := make([]*Packet, 10)
 	for i, _ := range packets {
 		t, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z07:00")
-		packets[i] = Packet{
+		packets[i] = &Packet{
 			Severity: SevInfo,
 			Facility: LogLocal1,
 			Time:     t,
