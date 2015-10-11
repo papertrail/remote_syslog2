@@ -23,8 +23,8 @@ const (
 )
 
 type LogFile struct {
-	Path        string
-	Application string
+	Path string
+	Tag  string
 }
 
 type ConfigFile struct {
@@ -181,7 +181,7 @@ func (cm *ConfigManager) parseFlags() {
 	for _, arg := range pflag.Args() {
 		log := strings.Split(arg, ":")
 		if len(log) == 2 {
-			cm.FlagFiles = append(cm.FlagFiles, LogFile{Application: log[0], Path: log[1]})
+			cm.FlagFiles = append(cm.FlagFiles, LogFile{Tag: log[0], Path: log[1]})
 		}
 	}
 }

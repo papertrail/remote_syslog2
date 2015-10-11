@@ -1,6 +1,6 @@
 files:
   - path: locallog.txt
-    application: my_app
+    tag: my_app
 destination:
   host: logs.papertrailapp.com
   port: 514
