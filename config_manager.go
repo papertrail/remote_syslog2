@@ -182,6 +182,8 @@ func (cm *ConfigManager) parseFlags() {
 		log := strings.Split(arg, ":")
 		if len(log) == 2 {
 			cm.FlagFiles = append(cm.FlagFiles, LogFile{Tag: log[0], Path: log[1]})
+		} else {
+			cm.FlagFiles = append(cm.FlagFiles, LogFile{Tag: "", Path: log[0]})
 		}
 	}
 }
