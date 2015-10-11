@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -27,6 +28,10 @@ func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logge
 	if err != nil {
 		log.Errorf("%s", err)
 		return
+	}
+
+	if tag == "" {
+		tag = path.Base(file)
 	}
 
 	for line := range t.Lines {
