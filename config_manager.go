@@ -28,7 +28,7 @@ type LogFile struct {
 }
 
 type ConfigFile struct {
-	Files       []LogFile
+	Files       []string
 	Destination struct {
 		Host     string `yaml:"host"`
 		Port     int    `yaml:"port"`
@@ -297,7 +297,16 @@ func (cm *ConfigManager) Poll() bool {
 }
 
 func (cm *ConfigManager) Files() []LogFile {
-	return append(cm.FlagFiles, cm.Config.Files...)
+	logFiles := cm.FlagFiles
+	for _, file := range cm.Config.Files {
+		log := strings.Split(file, ":")
+		if len(log) == 2 {
+			logFiles = append(logFiles, LogFile{Tag: log[0], Path: log[1]})
+		} else {
+			logFiles = append(logFiles, LogFile{Tag: "", Path: log[0]})
+		}
+	}
+	return logFiles
 }
 
 func (cm *ConfigManager) DebugLogFile() string {
