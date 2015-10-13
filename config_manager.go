@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ type LogFile struct {
 }
 
 type ConfigFile struct {
-	Files       []string
+	Files       []interface{}
 	Destination struct {
 		Host     string `yaml:"host"`
 		Port     int    `yaml:"port"`
@@ -299,11 +300,20 @@ func (cm *ConfigManager) Poll() bool {
 func (cm *ConfigManager) Files() []LogFile {
 	logFiles := cm.FlagFiles
 	for _, file := range cm.Config.Files {
-		log := strings.Split(file, ":")
-		if len(log) == 2 {
-			logFiles = append(logFiles, LogFile{Tag: log[0], Path: log[1]})
-		} else {
-			logFiles = append(logFiles, LogFile{Tag: "", Path: log[0]})
+		v := reflect.ValueOf(file)
+		switch v.Kind() {
+		case reflect.String:
+			logFiles = append(logFiles, LogFile{Tag: "", Path: v.String()})
+			break
+		case reflect.Map:
+			m := v.Interface().(map[interface{}]interface{})
+			tag := reflect.ValueOf(m["tag"])
+			path := reflect.ValueOf(m["path"])
+			if tag.Kind() == reflect.String && path.Kind() == reflect.String {
+				logFiles = append(logFiles, LogFile{Tag: tag.String(), Path: path.String()})
+			}
+			break
+		default:
 		}
 	}
 	return logFiles
