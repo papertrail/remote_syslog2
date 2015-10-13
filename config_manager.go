@@ -304,16 +304,17 @@ func (cm *ConfigManager) Files() []LogFile {
 		switch v.Kind() {
 		case reflect.String:
 			logFiles = append(logFiles, LogFile{Tag: "", Path: v.String()})
-			break
 		case reflect.Map:
 			m := v.Interface().(map[interface{}]interface{})
 			tag := reflect.ValueOf(m["tag"])
 			path := reflect.ValueOf(m["path"])
 			if tag.Kind() == reflect.String && path.Kind() == reflect.String {
 				logFiles = append(logFiles, LogFile{Tag: tag.String(), Path: path.String()})
+				break
 			}
-			break
+			fallthrough
 		default:
+			log.Errorf("Cloud not parse log file configuration: %v", v)
 		}
 	}
 	return logFiles
