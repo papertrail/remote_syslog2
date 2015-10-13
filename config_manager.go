@@ -314,7 +314,7 @@ func (cm *ConfigManager) Files() []LogFile {
 			}
 			fallthrough
 		default:
-			log.Errorf("Cloud not parse log file configuration: %v", v)
+			log.Errorf("Could not parse log file configuration: %v", v)
 		}
 	}
 	return logFiles
