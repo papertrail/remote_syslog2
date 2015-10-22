@@ -143,10 +143,13 @@ func (l *Logger) writePacket(p Packet) {
 			l.connect()
 		}
 
+		deadline := time.Now().Add(time.Duration(30) * time.Second)
 		switch l.conn.netConn.(type) {
 		case *net.TCPConn, *tls.Conn:
+			l.conn.netConn.SetWriteDeadline(deadline)
 			_, err = io.WriteString(l.conn.netConn, p.Generate(0)+"\n")
 		case *net.UDPConn:
+			l.conn.netConn.SetWriteDeadline(deadline)
 			_, err = io.WriteString(l.conn.netConn, p.Generate(1024))
 		default:
 			panic(fmt.Errorf("Network protocol %s not supported", l.network))
