@@ -60,9 +60,12 @@ func dial(network, raddr string, rootCAs *x509.CertPool) (*conn, error) {
 		if rootCAs != nil {
 			config = &tls.Config{RootCAs: rootCAs}
 		}
-		netConn, err = tls.Dial("tcp", raddr, config)
+		dialer := &net.Dialer{
+			Timeout : time.Duration(30) * time.Second,
+		}
+		netConn, err = tls.DialWithDialer(dialer, "tcp", raddr, config)
 	case "udp", "tcp":
-		netConn, err = net.Dial(network, raddr)
+		netConn, err = net.DialTimeout(network, raddr, time.Duration(30) * time.Second)
 	default:
 		return nil, fmt.Errorf("Network protocol %s not supported", network)
 	}
