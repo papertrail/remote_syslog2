@@ -50,7 +50,7 @@ func (c *conn) reconnectNeeded() bool {
 }
 
 // dial connects to the server and set up a watching goroutine
-func dial(network, raddr string, rootCAs *x509.CertPool) (*conn, error) {
+func dial(network, raddr string, rootCAs *x509.CertPool, timeout time.Duration) (*conn, error) {
 	var netConn net.Conn
 	var err error
 
@@ -61,11 +61,11 @@ func dial(network, raddr string, rootCAs *x509.CertPool) (*conn, error) {
 			config = &tls.Config{RootCAs: rootCAs}
 		}
 		dialer := &net.Dialer{
-			Timeout : time.Duration(30) * time.Second,
+			Timeout : timeout,
 		}
 		netConn, err = tls.DialWithDialer(dialer, "tcp", raddr, config)
 	case "udp", "tcp":
-		netConn, err = net.DialTimeout(network, raddr, time.Duration(30) * time.Second)
+		netConn, err = net.DialTimeout(network, raddr, timeout)
 	default:
 		return nil, fmt.Errorf("Network protocol %s not supported", network)
 	}
@@ -89,13 +89,14 @@ type Logger struct {
 	network string
 	raddr   string
 	rootCAs *x509.CertPool
+	timeout time.Duration
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
 // and launches a goroutine to watch logger.Packets for messages to log.
-func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool) (*Logger, error) {
+func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, timeout time.Duration) (*Logger, error) {
 	// dial once, just to make sure the network is working
-	conn, err := dial(network, raddr, rootCAs)
+	conn, err := dial(network, raddr, rootCAs, timeout)
 
 	if err != nil {
 		return nil, err
@@ -107,6 +108,7 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool) (*Logge
 			rootCAs:        rootCAs,
 			Packets:        make(chan Packet, 100),
 			Errors:         make(chan error, 0),
+			timeout:        timeout,
 			conn:           conn,
 		}
 		go logger.writeLoop()
@@ -117,7 +119,7 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool) (*Logge
 // Connect to the server, retrying every 10 seconds until successful.
 func (l *Logger) connect() {
 	for {
-		c, err := dial(l.network, l.raddr, l.rootCAs)
+		c, err := dial(l.network, l.raddr, l.rootCAs, l.timeout)
 		if err == nil {
 			l.conn = c
 			return

@@ -112,7 +112,7 @@ func main() {
 
 	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
 	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
+	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs(), cm.Timeout())
 
 	if err != nil {
 		log.Criticalf("Cannot connect to server: %v", err)
