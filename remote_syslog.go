@@ -107,7 +107,7 @@ func main() {
 	if cm.Daemonize() {
 		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())
 	}
-
+	utils.AddSignalHandlers()
 	loggo.ConfigureLoggers(cm.LogLevels())
 
 	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
