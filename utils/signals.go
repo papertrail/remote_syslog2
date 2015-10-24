@@ -37,7 +37,7 @@ func dumpStacks() {
 
 func AddSignalHandlers() {
 	sigChan := make(chan os.Signal, 1)
-    go func() {
+	go func() {
 		for sig := range sigChan {
 			go func(sig os.Signal) {
 				switch sig {
@@ -47,7 +47,6 @@ func AddSignalHandlers() {
 			}(sig)
 
 		}
-        	
     }()    
     signal.Notify(sigChan, syscall.SIGUSR1)
 }
