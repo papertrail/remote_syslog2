@@ -134,7 +134,7 @@ func TestSyslog(t *testing.T) {
 	for _, network := range []string{"tcp", "udp"} {
 		s := newTestServer(network)
 
-		logger, err := Dial(clienthost, network, s.Addr, nil)
+		logger, err := Dial(clienthost, network, s.Addr, nil, time.Duration(30) * time.Second)
 		if err != nil {
 			t.Errorf("unexpected dial error %v", err)
 		}
