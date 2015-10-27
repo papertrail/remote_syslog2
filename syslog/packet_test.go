@@ -3,34 +3,31 @@ package syslog
 import (
 	"testing"
 	"time"
+
+	. "gopkg.in/check.v1"
 )
 
-func TestPacketPriority(t *testing.T) {
-	tests := []struct {
-		severity Priority
-		facility Priority
-		priority Priority
-	}{
-		{0, 0, 0},
-		{SevNotice, LogLocal4, 165},
-	}
-	for _, test := range tests {
-		p := Packet{Severity: test.severity, Facility: test.facility}
-		if result := p.Priority(); result != test.priority {
-			t.Errorf("Bad priority, got %s expected %d", result, test.priority)
-		}
-	}
+func Test(t *testing.T) { TestingT(t) }
+
+type PacketSuite struct {
 }
 
-func parseTime(s string) time.Time {
-	t, err := time.Parse(time.RFC3339Nano, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
+var _ = Suite(&PacketSuite{})
+
+func (s *PacketSuite) SetUpSuite(c *C) {
 }
 
-func TestPacketGenerate(t *testing.T) {
+func (s *PacketSuite) TestPriority1(c *C) {
+	p := &Packet{Severity: 0, Facility: 0}
+	c.Assert(p.Priority(), Equals, Priority(0))
+}
+
+func (s *PacketSuite) TestPriority2(c *C) {
+	p := &Packet{Severity: SevNotice, Facility: LogLocal4}
+	c.Assert(p.Priority(), Equals, Priority(165))
+}
+
+func (s *PacketSuite) TestPacketGenerate(c *C) {
 	tests := []struct {
 		packet   Packet
 		max_size int
@@ -42,7 +39,7 @@ func TestPacketGenerate(t *testing.T) {
 			Packet{
 				Severity: SevCrit,
 				Facility: LogAuth,
-				Time:     parseTime("2003-10-11T22:14:15.003Z"),
+				Time:     s.time("2003-10-11T22:14:15.003Z", c),
 				Hostname: "mymachine.example.com",
 				Tag:      "su",
 				Message:  "'su root' failed for lonvick on /dev/pts/8",
@@ -55,7 +52,7 @@ func TestPacketGenerate(t *testing.T) {
 			Packet{
 				Severity: SevNotice,
 				Facility: LogLocal4,
-				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Time:     s.time("2003-08-24T05:14:15.000003-07:00", c),
 				Hostname: "192.0.2.1",
 				Tag:      "myproc",
 				Message:  `%% It's time to make the do-nuts.`,
@@ -68,7 +65,7 @@ func TestPacketGenerate(t *testing.T) {
 			Packet{
 				Severity: SevNotice,
 				Facility: LogLocal4,
-				Time:     parseTime("2003-08-24T05:14:15.123456789-07:00"),
+				Time:     s.time("2003-08-24T05:14:15.123456789-07:00", c),
 				Hostname: "192.0.2.1",
 				Tag:      "myproc",
 				Message:  `%% It's time to make the do-nuts.`,
@@ -81,7 +78,7 @@ func TestPacketGenerate(t *testing.T) {
 			Packet{
 				Severity: SevNotice,
 				Facility: LogLocal4,
-				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Time:     s.time("2003-08-24T05:14:15.000003-07:00", c),
 				Hostname: "192.0.2.1",
 				Tag:      "myproc",
 				Message:  `%% It's time to make the do-nuts.`,
@@ -94,7 +91,7 @@ func TestPacketGenerate(t *testing.T) {
 			Packet{
 				Severity: SevNotice,
 				Facility: LogLocal4,
-				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Time:     s.time("2003-08-24T05:14:15.000003-07:00", c),
 				Hostname: "192.0.2.1",
 				Tag:      "myproc",
 				Message:  `%% It's time to make the do-nuts.`,
@@ -106,7 +103,7 @@ func TestPacketGenerate(t *testing.T) {
 			Packet{
 				Severity: SevNotice,
 				Facility: LogLocal4,
-				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Time:     s.time("2003-08-24T05:14:15.000003-07:00", c),
 				Hostname: "192.0.2.1",
 				Tag:      "myproc",
 				Message:  "newline:'\n'. nullbyte:'\x00'. carriage return:'\r'.",
@@ -117,8 +114,12 @@ func TestPacketGenerate(t *testing.T) {
 	}
 	for _, test := range tests {
 		out := test.packet.Generate(test.max_size)
-		if out != test.output {
-			t.Errorf("Unexpected output, expected\n%v\ngot\n%v", test.output, out)
-		}
+		c.Assert(out, Equals, test.output)
 	}
+}
+
+func (s *PacketSuite) time(v string, c *C) time.Time {
+	t, err := time.Parse(time.RFC3339Nano, v)
+	c.Assert(err, IsNil)
+	return t
 }

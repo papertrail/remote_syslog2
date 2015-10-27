@@ -1,0 +1,8 @@
+files:
+  - foo.txt
+destination:
+  host: bar
+  port: 515
+  protocol: tcp
+hostname: baz
+new_file_check_interval: 20s

@@ -5,3 +5,4 @@ destination:
   port: 514
   protocol: tls
 hostname: test-host-from-config
+new_file_check_interval: 30s
