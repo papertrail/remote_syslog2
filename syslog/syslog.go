@@ -90,25 +90,20 @@ type Logger struct {
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
 // and launches a goroutine to watch logger.Packets for messages to log.
-func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool) (*Logger, error) {
-	// dial once, just to make sure the network is working
-	conn, err := dial(network, raddr, rootCAs)
-
-	if err != nil {
-		return nil, err
-	} else {
-		logger := &Logger{
-			ClientHostname: clientHostname,
-			network:        network,
-			raddr:          raddr,
-			rootCAs:        rootCAs,
-			Packets:        make(chan Packet, 100),
-			Errors:         make(chan error, 0),
-			conn:           conn,
-		}
-		go logger.writeLoop()
-		return logger, nil
+func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool) (*Logger) {
+	logger := &Logger{
+		ClientHostname: clientHostname,
+		network:        network,
+		raddr:          raddr,
+		rootCAs:        rootCAs,
+		Packets:        make(chan Packet, 100),
+		Errors:         make(chan error, 0),
 	}
+
+	logger.connect()
+
+	go logger.writeLoop()
+	return logger
 }
 
 // Connect to the server, retrying every 10 seconds until successful.

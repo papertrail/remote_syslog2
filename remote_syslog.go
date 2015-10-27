@@ -112,16 +112,11 @@ func main() {
 
 	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
 	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
-
-	if err != nil {
-		log.Criticalf("Cannot connect to server: %v", err)
-		os.Exit(1)
-	}
+	logger := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
 
 	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll())
 
-	for err = range logger.Errors {
+	for err := range logger.Errors {
 		log.Errorf("Syslog error: %v", err)
 	}
 }
