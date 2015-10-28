@@ -115,7 +115,7 @@ func main() {
 	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
 
 	if err != nil {
-		log.Errorf("Cannot connect to server: %v. Retries will be performed when a new log message is detected in any monitored file", err)
+		log.Errorf("Cannot connect to server: %v", err)
 	}
 
 	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll())
