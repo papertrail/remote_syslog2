@@ -115,8 +115,7 @@ func main() {
 	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs())
 
 	if err != nil {
-		log.Criticalf("Cannot connect to server: %v", err)
-		os.Exit(1)
+		log.Errorf("Cannot connect to server: %v", err)
 	}
 
 	go tailFiles(cm.Files(), cm.ExcludeFiles(), cm.ExcludePatterns(), cm.RefreshInterval(), logger, cm.Severity(), cm.Facility(), cm.Poll())
