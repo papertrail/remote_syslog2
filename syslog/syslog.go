@@ -105,7 +105,7 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 		rootCAs:        rootCAs,
 		Packets:        make(chan Packet, 100),
 		Errors:         make(chan error, 0),
-		connectTimeout: connectTimeout
+		connectTimeout: connectTimeout,
 		conn:           conn,
 	}
 	go logger.writeLoop()
