@@ -29,6 +29,7 @@ type ConfigFile struct {
 		Protocol string `yaml:"protocol"`
 	}
 	Hostname string `yaml:"hostname"`
+	ConnectTimeout int `yaml:"connect_timeout"`
 	WriteTimeout int `yaml:"write_timeout"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
@@ -353,6 +354,14 @@ func (cm *ConfigManager) ExcludeFiles() []*regexp.Regexp {
 
 func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 	return *cm.Config.ExcludePatterns
+}
+
+func (cm *ConfigManager) ConnectTimeout() time.Duration {
+	connectTimeout := cm.Config.ConnectTimeout
+	if(connectTimeout != 0) {
+		return time.Duration(connectTimeout) * time.Second
+	}
+	return time.Duration(30) * time.Second
 }
 
 func (cmd *ConfigManager) WriteTimeout() time.Duration {
