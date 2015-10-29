@@ -90,11 +90,12 @@ type Logger struct {
 	raddr   string
 	rootCAs *x509.CertPool
 	connectTimeout time.Duration
+	writeTimeout time.Duration
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
 // and launches a goroutine to watch logger.Packets for messages to log.
-func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration) (*Logger, error) {
+func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration, writeTimeout time.Duration) (*Logger, error) {
 	// dial once, just to make sure the network is working
 	conn, err := dial(network, raddr, rootCAs, connectTimeout)
 
@@ -106,6 +107,7 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 		Packets:        make(chan Packet, 100),
 		Errors:         make(chan error, 0),
 		connectTimeout: connectTimeout,
+		writeTimeout:	writeTimeout,
 		conn:           conn,
 	}
 	go logger.writeLoop()
@@ -144,10 +146,13 @@ func (l *Logger) writePacket(p Packet) {
 			l.connect()
 		}
 
+		deadline := time.Now().Add(l.writeTimeout)
 		switch l.conn.netConn.(type) {
 		case *net.TCPConn, *tls.Conn:
+			l.conn.netConn.SetWriteDeadline(deadline)
 			_, err = io.WriteString(l.conn.netConn, p.Generate(0)+"\n")
 		case *net.UDPConn:
+			l.conn.netConn.SetWriteDeadline(deadline)
 			_, err = io.WriteString(l.conn.netConn, p.Generate(1024))
 		default:
 			panic(fmt.Errorf("Network protocol %s not supported", l.network))
