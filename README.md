@@ -251,6 +251,17 @@ contents with the program name `unique_name.log`.
 
 ## Troubleshooting
 
+### Truncated messages
+
+To send messages longer than 1024 characters, use TCP (either TLS or cleartext
+TCP) of UDP. See "[Sending messages securely](#sending-messages-securely)" to
+use TCP with TLS for messages of any length.
+
+[Here's why](http://help.papertrailapp.com/kb/configuration/troubleshooting-remote-syslog-reachability/#message-length) longer UDP messages are impossible to send over
+the Internet.
+
+### inotify
+
 When running remote_syslog in the foreground using the `-D` switch, if you
 receive the error:
 
@@ -270,7 +281,9 @@ up and then apply this new value permanently by adding the following to
 
     fs.inotify.max_user_instances = VALUE
 
-Another error that can occur when monitoring a large number of files is:
+### "No space left on device"
+
+When monitoring a large number of files, this error may occur:
 
     FATAL -- Error watching /path/here : no space left on device
 
@@ -283,8 +296,7 @@ and then increase them using:
 
     echo VALUE >> /proc/sys/fs/inotify/max_user_watches
 
-Once again, confirm that remote_syslog starts and then apply this value permanently
-by adding the following to `/etc/sysctl.conf:`:
+Once again, confirm that remote_syslog starts and then apply this value permanently by adding the following to `/etc/sysctl.conf:`:
 
     fs.inotify.max_user_watches = VALUE
 
