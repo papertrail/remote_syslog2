@@ -172,7 +172,7 @@ func (cm *ConfigManager) parseFlags() {
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
-	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
+	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "set go-logging config, like: --log=\"<root>=DEBUG\"")
 	pflag.Parse()
 	cm.FlagFiles = pflag.Args()
 }

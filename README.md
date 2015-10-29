@@ -64,7 +64,7 @@ Configuration directives can also be specified as command-line arguments (below)
           --eventmachine-tail=false: No action, provided for backwards compatibility
       -f, --facility="user": Facility
           --hostname="": Local hostname to send from
-          --log="<root>=INFO": "logging configuration <root>=INFO;first=TRACE"
+          --log="<root>=INFO": set go-logging config, like: --log="<root>=DEBUG"
           --new-file-check-interval={0}: How often to check for new files
       -D, --no-detach=false: Don't daemonize and detach from the terminal
           --no-eventmachine-tail=false: No action, provided for backwards compatibility
