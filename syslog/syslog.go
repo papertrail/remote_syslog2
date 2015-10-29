@@ -98,22 +98,18 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 	// dial once, just to make sure the network is working
 	conn, err := dial(network, raddr, rootCAs, connectTimeout)
 
-	if err != nil {
-		return nil, err
-	} else {
-		logger := &Logger{
-			ClientHostname: clientHostname,
-			network:        network,
-			raddr:          raddr,
-			rootCAs:        rootCAs,
-			Packets:        make(chan Packet, 100),
-			Errors:         make(chan error, 0),
-			connectTimeout: connectTimeout,
-			conn:           conn,
-		}
-		go logger.writeLoop()
-		return logger, nil
+	logger := &Logger{
+		ClientHostname: clientHostname,
+		network:        network,
+		raddr:          raddr,
+		rootCAs:        rootCAs,
+		Packets:        make(chan Packet, 100),
+		Errors:         make(chan error, 0),
+		connectTimeout: connectTimeout
+		conn:           conn,
 	}
+	go logger.writeLoop()
+	return logger, err
 }
 
 // Connect to the server, retrying every 10 seconds until successful.

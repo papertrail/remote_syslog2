@@ -20,8 +20,8 @@ package: $(BUILD_PAIRS)
 build: depend clean test
 	@echo
 	@echo "\033[32mBuilding ----> \033[m"
-	$(GODEP) gox -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
-	$(GODEP) gox -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
+	$(GODEP) gox -cgo -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	$(GODEP) gox -cgo -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
 
 
 clean:
