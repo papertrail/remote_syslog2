@@ -8,7 +8,7 @@
 		},
 		{
 			"ImportPath": "github.com/VividCortex/godaemon",
-			"Rev": "2fdf3f9fa715a998e834f09e07a8070d9046bcfd"
+			"Rev": "560bd39278f31c0ec39d52beadad9558dcb08ba2"
 		},
 		{
 			"ImportPath": "github.com/howbazaar/loggo",
