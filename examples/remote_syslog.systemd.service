@@ -5,7 +5,7 @@ After=rsyslog.service
 
 [Service]
 ExecStartPre=/usr/bin/test -e /etc/log_files.yml
-ExecStart=/usr/local/bin/remote_syslog -D
+ExecStart=/usr/local/bin/remote_syslog2 -D
 Restart=always
 User=root
 Group=root
