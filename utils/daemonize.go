@@ -53,12 +53,13 @@ func Daemonize(logFilePath, pidFilePath string) {
 		io.Copy(logFile, stderr)
 	}()
 
+	lock, err := lockfile.New(pidFilePath)
+
 	removePidFile := func() {
 		fmt.Fprintf(os.Stderr, "Removing %s\n", pidFilePath)
 		lock.Unlock()
 	}
 
-	lock, err := lockfile.New(pidFilePath)
 	err = lock.TryLock()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot lock \"%v\", error was %v\n", lock, err)
