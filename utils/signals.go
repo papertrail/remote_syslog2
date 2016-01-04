@@ -3,15 +3,46 @@
 package utils
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"os/signal"
 	"runtime"
 	"syscall"
-	"os/signal"
-	"io/ioutil"
 )
 
+var SignalHandlers = map[os.Signal]func(){
+	syscall.SIGUSR1: dumpStacks, // Dump goroutines stacks
+}
+
+func AddSignalHandlers() {
+	var trapped []os.Signal
+	for k := range SignalHandlers {
+		trapped = append(trapped, k)
+	}
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, trapped...)
+
+	go func() {
+		for sig := range signals {
+			if f, found := SignalHandlers[sig]; found {
+				fmt.Fprintf(os.Stderr, "Handling signal: %v\n", sig)
+				f()
+			}
+
+			switch sig {
+			case syscall.SIGINT, syscall.SIGTERM:
+				os.Exit(128 + int(sig.(syscall.Signal)))
+			case syscall.SIGQUIT:
+				os.Exit(0)
+			}
+		}
+	}()
+}
+
 // Mostly copied from Docker
-func dumpStacks() {	
+func dumpStacks() {
 	var (
 		buf       []byte
 		stackSize int
@@ -28,25 +59,8 @@ func dumpStacks() {
 
 	f, err := ioutil.TempFile("", "r_s_stacktrace")
 	defer f.Close()
-	if (err == nil) {
+	if err == nil {
 		f.WriteString(string(buf))
 	}
 
-
-}
-
-func AddSignalHandlers() {
-	sigChan := make(chan os.Signal, 1)
-	go func() {
-		for sig := range sigChan {
-			go func(sig os.Signal) {
-				switch sig {
-				case syscall.SIGUSR1:
-					dumpStacks()
-				}
-			}(sig)
-
-		}
-    }()    
-    signal.Notify(sigChan, syscall.SIGUSR1)
 }
