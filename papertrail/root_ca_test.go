@@ -9,7 +9,7 @@ import (
 func TestCerts(t *testing.T) {
 	h := md5.New()
 	h.Write(certs())
-	expected := "3203239f3684b19dc0aec8554a2613a7"
+	expected := "5b4d7071d39297756dbc80d375b2c4f7"
 	actual := fmt.Sprintf("%x", h.Sum(nil))
 	if actual != expected {
 		t.Errorf("Mismatched hash for papertrail certs, expected %s got %s", expected, actual)
