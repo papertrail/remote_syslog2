@@ -6,7 +6,7 @@ import (
 )
 
 func certs() []byte {
-	// this is https://papertrailapp.com/tools/syslog.papertrail.crt
+	// this is https://papertrailapp.com/tools/papertrail-bundle.pem
 	s := `GTE CyberTrust Global Root
 ==========================
 -----BEGIN CERTIFICATE-----
