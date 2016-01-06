@@ -28,9 +28,10 @@ type ConfigFile struct {
 		Port     int    `yaml:"port"`
 		Protocol string `yaml:"protocol"`
 	}
-	Hostname string `yaml:"hostname"`
-	ConnectTimeout int `yaml:"connect_timeout"`
-	WriteTimeout int `yaml:"write_timeout"`
+	Hostname             string `yaml:"hostname"`
+	ConnectTimeout       int    `yaml:"connect_timeout"`
+	WriteTimeout         int    `yaml:"write_timeout"`
+	ReadNewFromBeginning bool   `yaml:"read_new_from_beginning"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
@@ -41,20 +42,21 @@ type ConfigManager struct {
 	Config    ConfigFile
 	FlagFiles []string
 	Flags     struct {
-		Hostname        string
-		DestHost        string
-		DestPort        int
-		ConfigFile      string
-		LogLevels       string
-		DebugLogFile    string
-		PidFile         string
-		RefreshInterval RefreshInterval
-		UseTCP          bool
-		UseTLS          bool
-		NoDaemonize     bool
-		Severity        string
-		Facility        string
-		Poll            bool
+		Hostname             string
+		DestHost             string
+		DestPort             int
+		ConfigFile           string
+		LogLevels            string
+		DebugLogFile         string
+		PidFile              string
+		RefreshInterval      RefreshInterval
+		UseTCP               bool
+		UseTLS               bool
+		NoDaemonize          bool
+		Severity             string
+		Facility             string
+		Poll                 bool
+		ReadNewFromBeginning bool
 	}
 }
 
@@ -168,6 +170,7 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
+	pflag.BoolVar(&cm.Flags.ReadNewFromBeginning, "read-new-from-beginning", false, "Read files detected after daemon startup from the beginning")
 	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
@@ -285,6 +288,10 @@ func (cm *ConfigManager) Poll() bool {
 	return cm.Flags.Poll
 }
 
+func (cm *ConfigManager) ReadNewFromBeginning() bool {
+	return cm.Flags.ReadNewFromBeginning || cm.Config.ReadNewFromBeginning
+}
+
 func (cm *ConfigManager) Files() []string {
 	return append(cm.FlagFiles, cm.Config.Files...)
 }
@@ -358,7 +365,7 @@ func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 
 func (cm *ConfigManager) ConnectTimeout() time.Duration {
 	connectTimeout := cm.Config.ConnectTimeout
-	if(connectTimeout != 0) {
+	if connectTimeout != 0 {
 		return time.Duration(connectTimeout) * time.Second
 	}
 	return time.Duration(30) * time.Second
@@ -366,7 +373,7 @@ func (cm *ConfigManager) ConnectTimeout() time.Duration {
 
 func (cmd *ConfigManager) WriteTimeout() time.Duration {
 	writeTimeout := cmd.Config.WriteTimeout
-	if(writeTimeout != 0) {
+	if writeTimeout != 0 {
 		return time.Duration(writeTimeout) * time.Second
 	}
 	return time.Duration(30) * time.Second
