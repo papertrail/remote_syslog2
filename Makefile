@@ -93,7 +93,7 @@ $(BUILD_PAIRS): build
 		mkdir -p pkg/tmp/etc/init.d;\
 		mkdir -p pkg/tmp/usr/local/bin;\
 		cp -f example_config.yml pkg/tmp/etc/log_files.yml;\
-		cp -f packaging/linux/remote_syslog.initd pkg/tmp/etc/init.d/remote_syslog;\
+		cp -f examples/remote_syslog.initd pkg/tmp/etc/init.d/remote_syslog;\
 		cp -f build/$@/remote_syslog/remote_syslog pkg/tmp/usr/local/bin;\
 		(cd pkg && \
 		fpm \
