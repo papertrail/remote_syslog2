@@ -3,15 +3,15 @@
 package utils
 
 import (
+	"io/ioutil"
 	"os"
+	"os/signal"
 	"runtime"
 	"syscall"
-	"os/signal"
-	"io/ioutil"
 )
 
 // Mostly copied from Docker
-func dumpStacks() {	
+func dumpStacks() {
 	var (
 		buf       []byte
 		stackSize int
@@ -28,10 +28,9 @@ func dumpStacks() {
 
 	f, err := ioutil.TempFile("", "r_s_stacktrace")
 	defer f.Close()
-	if (err == nil) {
+	if err == nil {
 		f.WriteString(string(buf))
 	}
-
 
 }
 
@@ -47,6 +46,6 @@ func AddSignalHandlers() {
 			}(sig)
 
 		}
-    }()    
-    signal.Notify(sigChan, syscall.SIGUSR1)
+	}()
+	signal.Notify(sigChan, syscall.SIGUSR1)
 }
