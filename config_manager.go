@@ -3,17 +3,16 @@ package main
 import (
 	"crypto/x509"
 	"fmt"
+	"github.com/ogier/pflag"
+	"github.com/urjitbhatia/remote_syslog2/papertrail"
+	"github.com/urjitbhatia/remote_syslog2/syslog"
+	"github.com/urjitbhatia/remote_syslog2/utils"
 	"io/ioutil"
+	"launchpad.net/goyaml"
 	"os"
 	"path/filepath"
 	"regexp"
 	"time"
-
-	"github.com/ogier/pflag"
-	"github.com/papertrail/remote_syslog2/papertrail"
-	"github.com/papertrail/remote_syslog2/syslog"
-	"github.com/papertrail/remote_syslog2/utils"
-	"launchpad.net/goyaml"
 )
 
 const (
@@ -28,9 +27,9 @@ type ConfigFile struct {
 		Port     int    `yaml:"port"`
 		Protocol string `yaml:"protocol"`
 	}
-	Hostname string `yaml:"hostname"`
-	ConnectTimeout int `yaml:"connect_timeout"`
-	WriteTimeout int `yaml:"write_timeout"`
+	Hostname       string `yaml:"hostname"`
+	ConnectTimeout int    `yaml:"connect_timeout"`
+	WriteTimeout   int    `yaml:"write_timeout"`
 	//SetYAML is only called on pointers
 	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
@@ -358,7 +357,7 @@ func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 
 func (cm *ConfigManager) ConnectTimeout() time.Duration {
 	connectTimeout := cm.Config.ConnectTimeout
-	if(connectTimeout != 0) {
+	if connectTimeout != 0 {
 		return time.Duration(connectTimeout) * time.Second
 	}
 	return time.Duration(30) * time.Second
@@ -366,7 +365,7 @@ func (cm *ConfigManager) ConnectTimeout() time.Duration {
 
 func (cmd *ConfigManager) WriteTimeout() time.Duration {
 	writeTimeout := cmd.Config.WriteTimeout
-	if(writeTimeout != 0) {
+	if writeTimeout != 0 {
 		return time.Duration(writeTimeout) * time.Second
 	}
 	return time.Duration(30) * time.Second

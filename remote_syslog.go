@@ -11,8 +11,8 @@ import (
 
 	"github.com/ActiveState/tail"
 	"github.com/howbazaar/loggo"
-	"github.com/papertrail/remote_syslog2/syslog"
-	"github.com/papertrail/remote_syslog2/utils"
+	"github.com/urjitbhatia/remote_syslog2/syslog"
+	"github.com/urjitbhatia/remote_syslog2/utils"
 )
 
 var log = loggo.GetLogger("")
@@ -54,7 +54,6 @@ func tailOne(file string, excludePatterns []*regexp.Regexp, logger *syslog.Logge
 // at the specified interval
 func tailFiles(globs []string, excludedFiles []*regexp.Regexp, excludePatterns []*regexp.Regexp, interval RefreshInterval, logger *syslog.Logger, severity syslog.Priority, facility syslog.Priority, poll bool) {
 	wr := NewWorkerRegistry()
-	log.Debugf("Evaluating globs every %s", interval.Duration)
 	logMissingFiles := true
 	for {
 		globFiles(globs, excludedFiles, excludePatterns, logger, &wr, logMissingFiles, severity, facility, poll)
@@ -112,7 +111,7 @@ func main() {
 
 	raddr := net.JoinHostPort(cm.DestHost(), strconv.Itoa(cm.DestPort()))
 	log.Infof("Connecting to %s over %s", raddr, cm.DestProtocol())
-	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs(), cm.ConnectTimeout(), cm.WriteTimeout())
+	logger, err := syslog.Dial(cm.Hostname(), cm.DestProtocol(), raddr, cm.RootCAs(), cm.ConnectTimeout(), cm.WriteTimeout(), &log)
 
 	if err != nil {
 		log.Errorf("Cannot connect to server: %v", err)

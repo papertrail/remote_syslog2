@@ -7,10 +7,11 @@ reliably reconnects on failure, and supports TLS encrypted TCP connections.
 package syslog
 
 import (
+	_ "crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
-	_ "crypto/sha512"
 	"fmt"
+	"github.com/howbazaar/loggo"
 	"io"
 	"net"
 	"time"
@@ -18,16 +19,20 @@ import (
 
 // A net.Conn with added reconnection logic
 type conn struct {
-	netConn net.Conn
-	errors  chan error
+	netConn      net.Conn
+	errors       chan error
+	connectionId int  // Doubles as count
+	forceReset   bool // Discard this conn if this is true
 }
 
 // watch watches the connection for error, sends detected error to c.errors
-func (c *conn) watch() {
+func (c *conn) watch(log *loggo.Logger) {
 	for {
 		data := make([]byte, 1)
 		_, err := c.netConn.Read(data)
+
 		if err != nil {
+			log.Errorf("Connection error: %v on Connection: %d", err, c.connectionId)
 			c.netConn.Close()
 			c.errors <- err
 			return
@@ -37,12 +42,18 @@ func (c *conn) watch() {
 
 // reconnectNeeded determines if a reconnect is needed by checking for a
 // message on the readErrors channel
-func (c *conn) reconnectNeeded() bool {
+func (c *conn) reconnectNeeded(log *loggo.Logger) bool {
 	if c == nil {
 		return true
 	}
+
+	if c.forceReset {
+		return true
+	}
+
 	select {
 	case <-c.errors:
+		log.Errorf("Error from connection: %d reconnectNeeded due to error while reading", c.connectionId)
 		return true
 	default:
 		return false
@@ -50,7 +61,7 @@ func (c *conn) reconnectNeeded() bool {
 }
 
 // dial connects to the server and set up a watching goroutine
-func dial(network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration) (*conn, error) {
+func dial(network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration, log *loggo.Logger) (*conn, error) {
 	var netConn net.Conn
 	var err error
 
@@ -61,7 +72,7 @@ func dial(network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Dur
 			config = &tls.Config{RootCAs: rootCAs}
 		}
 		dialer := &net.Dialer{
-			Timeout : connectTimeout,
+			Timeout: connectTimeout,
 		}
 		netConn, err = tls.DialWithDialer(dialer, "tcp", raddr, config)
 	case "udp", "tcp":
@@ -72,8 +83,8 @@ func dial(network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Dur
 	if err != nil {
 		return nil, err
 	} else {
-		c := &conn{netConn, make(chan error)}
-		go c.watch()
+		c := &conn{netConn, make(chan error), 0, false}
+		go c.watch(log)
 		return c, nil
 	}
 }
@@ -86,18 +97,19 @@ type Logger struct {
 	Errors         chan error
 	ClientHostname string
 
-	network string
-	raddr   string
-	rootCAs *x509.CertPool
+	network        string
+	raddr          string
+	rootCAs        *x509.CertPool
 	connectTimeout time.Duration
-	writeTimeout time.Duration
+	writeTimeout   time.Duration
+	log            *loggo.Logger
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
 // and launches a goroutine to watch logger.Packets for messages to log.
-func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration, writeTimeout time.Duration) (*Logger, error) {
+func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration, writeTimeout time.Duration, log *loggo.Logger) (*Logger, error) {
 	// dial once, just to make sure the network is working
-	conn, err := dial(network, raddr, rootCAs, connectTimeout)
+	conn, err := dial(network, raddr, rootCAs, connectTimeout, log)
 
 	logger := &Logger{
 		ClientHostname: clientHostname,
@@ -107,8 +119,9 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 		Packets:        make(chan Packet, 100),
 		Errors:         make(chan error, 0),
 		connectTimeout: connectTimeout,
-		writeTimeout:	writeTimeout,
+		writeTimeout:   writeTimeout,
 		conn:           conn,
+		log:            log,
 	}
 	go logger.writeLoop()
 	return logger, err
@@ -117,11 +130,15 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 // Connect to the server, retrying every 10 seconds until successful.
 func (l *Logger) connect() {
 	for {
-		c, err := dial(l.network, l.raddr, l.rootCAs, l.connectTimeout)
+		c, err := dial(l.network, l.raddr, l.rootCAs, l.connectTimeout, l.log)
 		if err == nil {
+			l.log.Infof("Discarding connection: %d", l.conn.connectionId)
+			c.connectionId = l.conn.connectionId + 1
 			l.conn = c
+			l.log.Infof("Connected to remote server with connection: %d", l.conn.connectionId)
 			return
 		} else {
+			l.log.Errorf("Could not connect to remote server. Will retry after 10 seconds", err)
 			l.handleError(err)
 			time.Sleep(10 * time.Second)
 		}
@@ -142,7 +159,8 @@ func (l *Logger) handleError(err error) {
 func (l *Logger) writePacket(p Packet) {
 	var err error
 	for {
-		if l.conn.reconnectNeeded() {
+		if l.conn.reconnectNeeded(l.log) {
+			l.log.Infof("Reconnection needed - attempting reconnection")
 			l.connect()
 		}
 
@@ -160,7 +178,12 @@ func (l *Logger) writePacket(p Packet) {
 		if err == nil {
 			return
 		} else {
+			l.log.Errorf("**Failed to write using connection: %d. Forcing connection reset after timeout", l.conn.connectionId)
 			l.handleError(err)
+			l.conn.forceReset = true // Write failed - force reset connection.
+			// Do a more aggressive connection reset because the remote server seems to
+			// close the write pipe but not the actual connection. Then eventually the connection
+			// thrashes to establish a new tcp socket with the remote server.
 			time.Sleep(10 * time.Second)
 		}
 	}
@@ -168,6 +191,7 @@ func (l *Logger) writePacket(p Packet) {
 
 // writeloop writes any packets recieved on l.Packets() to the syslog server.
 func (l *Logger) writeLoop() {
+	l.log.Infof("*** READY TO SEND PACKETS ***")
 	for p := range l.Packets {
 		l.writePacket(p)
 	}
