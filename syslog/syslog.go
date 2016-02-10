@@ -150,7 +150,7 @@ func (l *Logger) writePacket(p Packet) {
 		switch l.conn.netConn.(type) {
 		case *net.TCPConn, *tls.Conn:
 			l.conn.netConn.SetWriteDeadline(deadline)
-			_, err = io.WriteString(l.conn.netConn, p.Generate(0)+"\n")
+			_, err = io.WriteString(l.conn.netConn, p.Generate(102400)+"\n")
 		case *net.UDPConn:
 			l.conn.netConn.SetWriteDeadline(deadline)
 			_, err = io.WriteString(l.conn.netConn, p.Generate(1024))
