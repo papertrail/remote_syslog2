@@ -35,7 +35,7 @@ type ConfigFile struct {
 	RefreshInterval  *RefreshInterval `yaml:"new_file_check_interval"`
 	ExcludeFiles     *RegexCollection `yaml:"exclude_files"`
 	ExcludePatterns  *RegexCollection `yaml:"exclude_patterns"`
-	TcpMaxLineLength int              `yaml:tcp_max_line_length`
+	TcpMaxLineLength int              `yaml:"tcp_max_line_length"`
 }
 
 type ConfigManager struct {
