@@ -23,4 +23,4 @@ _testmain.go
 
 /build/
 /pkg/
-remote_syslog2
+remote_syslog
