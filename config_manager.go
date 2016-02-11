@@ -273,7 +273,7 @@ func (cm *ConfigManager) TcpMaxLineLength() int {
 	case cm.Config.TcpMaxLineLength != 0:
 		return cm.Config.TcpMaxLineLength
 	default:
-		return 100000
+		return 99990
 	}
 }
 
