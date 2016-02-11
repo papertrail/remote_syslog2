@@ -7,9 +7,9 @@ reliably reconnects on failure, and supports TLS encrypted TCP connections.
 package syslog
 
 import (
+	_ "crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
-	_ "crypto/sha512"
 	"fmt"
 	"io"
 	"net"
@@ -61,7 +61,7 @@ func dial(network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Dur
 			config = &tls.Config{RootCAs: rootCAs}
 		}
 		dialer := &net.Dialer{
-			Timeout : connectTimeout,
+			Timeout: connectTimeout,
 		}
 		netConn, err = tls.DialWithDialer(dialer, "tcp", raddr, config)
 	case "udp", "tcp":
@@ -86,29 +86,31 @@ type Logger struct {
 	Errors         chan error
 	ClientHostname string
 
-	network string
-	raddr   string
-	rootCAs *x509.CertPool
-	connectTimeout time.Duration
-	writeTimeout time.Duration
+	network          string
+	raddr            string
+	rootCAs          *x509.CertPool
+	connectTimeout   time.Duration
+	writeTimeout     time.Duration
+	tcpMaxLineLength int
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
 // and launches a goroutine to watch logger.Packets for messages to log.
-func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration, writeTimeout time.Duration) (*Logger, error) {
+func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Duration, writeTimeout time.Duration, tcpMaxLineLength int) (*Logger, error) {
 	// dial once, just to make sure the network is working
 	conn, err := dial(network, raddr, rootCAs, connectTimeout)
 
 	logger := &Logger{
-		ClientHostname: clientHostname,
-		network:        network,
-		raddr:          raddr,
-		rootCAs:        rootCAs,
-		Packets:        make(chan Packet, 100),
-		Errors:         make(chan error, 0),
-		connectTimeout: connectTimeout,
-		writeTimeout:	writeTimeout,
-		conn:           conn,
+		ClientHostname:   clientHostname,
+		network:          network,
+		raddr:            raddr,
+		rootCAs:          rootCAs,
+		Packets:          make(chan Packet, 100),
+		Errors:           make(chan error, 0),
+		connectTimeout:   connectTimeout,
+		writeTimeout:     writeTimeout,
+		conn:             conn,
+		tcpMaxLineLength: tcpMaxLineLength,
 	}
 	go logger.writeLoop()
 	return logger, err
@@ -150,7 +152,7 @@ func (l *Logger) writePacket(p Packet) {
 		switch l.conn.netConn.(type) {
 		case *net.TCPConn, *tls.Conn:
 			l.conn.netConn.SetWriteDeadline(deadline)
-			_, err = io.WriteString(l.conn.netConn, p.Generate(0)+"\n")
+			_, err = io.WriteString(l.conn.netConn, p.Generate(l.tcpMaxLineLength)+"\n")
 		case *net.UDPConn:
 			l.conn.netConn.SetWriteDeadline(deadline)
 			_, err = io.WriteString(l.conn.netConn, p.Generate(1024))

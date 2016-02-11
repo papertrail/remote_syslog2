@@ -28,33 +28,35 @@ type ConfigFile struct {
 		Port     int    `yaml:"port"`
 		Protocol string `yaml:"protocol"`
 	}
-	Hostname string `yaml:"hostname"`
-	ConnectTimeout int `yaml:"connect_timeout"`
-	WriteTimeout int `yaml:"write_timeout"`
+	Hostname       string `yaml:"hostname"`
+	ConnectTimeout int    `yaml:"connect_timeout"`
+	WriteTimeout   int    `yaml:"write_timeout"`
 	//SetYAML is only called on pointers
-	RefreshInterval *RefreshInterval `yaml:"new_file_check_interval"`
-	ExcludeFiles    *RegexCollection `yaml:"exclude_files"`
-	ExcludePatterns *RegexCollection `yaml:"exclude_patterns"`
+	RefreshInterval  *RefreshInterval `yaml:"new_file_check_interval"`
+	ExcludeFiles     *RegexCollection `yaml:"exclude_files"`
+	ExcludePatterns  *RegexCollection `yaml:"exclude_patterns"`
+	TcpMaxLineLength int              `yaml:"tcp_max_line_length"`
 }
 
 type ConfigManager struct {
 	Config    ConfigFile
 	FlagFiles []string
 	Flags     struct {
-		Hostname        string
-		DestHost        string
-		DestPort        int
-		ConfigFile      string
-		LogLevels       string
-		DebugLogFile    string
-		PidFile         string
-		RefreshInterval RefreshInterval
-		UseTCP          bool
-		UseTLS          bool
-		NoDaemonize     bool
-		Severity        string
-		Facility        string
-		Poll            bool
+		Hostname         string
+		DestHost         string
+		DestPort         int
+		ConfigFile       string
+		LogLevels        string
+		DebugLogFile     string
+		PidFile          string
+		RefreshInterval  RefreshInterval
+		UseTCP           bool
+		UseTLS           bool
+		NoDaemonize      bool
+		Severity         string
+		Facility         string
+		Poll             bool
+		TcpMaxLineLength int
 	}
 }
 
@@ -173,6 +175,7 @@ func (cm *ConfigManager) parseFlags() {
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "set loggo config, like: --log=\"<root>=DEBUG\"")
+	pflag.IntVar(&cm.Flags.TcpMaxLineLength, "tcp-max-line-length", 0, "Maximum TCP line length")
 	pflag.Parse()
 	cm.FlagFiles = pflag.Args()
 }
@@ -260,6 +263,17 @@ func (cm *ConfigManager) DestProtocol() string {
 		return cm.Config.Destination.Protocol
 	default:
 		return "udp"
+	}
+}
+
+func (cm *ConfigManager) TcpMaxLineLength() int {
+	switch {
+	case cm.Flags.TcpMaxLineLength != 0:
+		return cm.Flags.TcpMaxLineLength
+	case cm.Config.TcpMaxLineLength != 0:
+		return cm.Config.TcpMaxLineLength
+	default:
+		return 99990
 	}
 }
 
@@ -358,7 +372,7 @@ func (cm *ConfigManager) ExcludePatterns() []*regexp.Regexp {
 
 func (cm *ConfigManager) ConnectTimeout() time.Duration {
 	connectTimeout := cm.Config.ConnectTimeout
-	if(connectTimeout != 0) {
+	if connectTimeout != 0 {
 		return time.Duration(connectTimeout) * time.Second
 	}
 	return time.Duration(30) * time.Second
@@ -366,7 +380,7 @@ func (cm *ConfigManager) ConnectTimeout() time.Duration {
 
 func (cmd *ConfigManager) WriteTimeout() time.Duration {
 	writeTimeout := cmd.Config.WriteTimeout
-	if(writeTimeout != 0) {
+	if writeTimeout != 0 {
 		return time.Duration(writeTimeout) * time.Second
 	}
 	return time.Duration(30) * time.Second
