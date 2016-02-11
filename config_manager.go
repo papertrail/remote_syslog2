@@ -175,7 +175,7 @@ func (cm *ConfigManager) parseFlags() {
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "set loggo config, like: --log=\"<root>=DEBUG\"")
-	pflag.IntVarP(&cm.Flags.TcpMaxLineLength, "tcp-max-line-length", "", 0, "Maximum TCP line length")
+	pflag.IntVar(&cm.Flags.TcpMaxLineLength, "tcp-max-line-length", 0, "Maximum TCP line length")
 	pflag.Parse()
 	cm.FlagFiles = pflag.Args()
 }
