@@ -6,7 +6,7 @@ set -e
 
 mkdir -p $BUILDPATH
 
-godep go build -o $BUILDPATH/remote_syslog2 .
+godep go build -o $BUILDPATH/remote_syslog .
 cp README.md LICENSE example_config.yml $BUILDPATH
 
 cd $BUILDPATH/..
