@@ -136,7 +136,7 @@ func TestSyslog(t *testing.T) {
 
 		connectTimeout := time.Duration(30) * time.Second
 		writeTimeout := connectTimeout
-		logger, err := Dial(clienthost, network, s.Addr, nil, connectTimeout, writeTimeout, 100000)
+		logger, err := Dial(clienthost, network, s.Addr, nil, connectTimeout, writeTimeout, 99990)
 		if err != nil {
 			t.Errorf("unexpected dial error %v", err)
 		}
