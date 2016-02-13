@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -17,7 +18,7 @@ import (
 )
 
 const (
-	MinimumRefreshInterval = (time.Duration(10) * time.Second)
+	MinimumRefreshInterval = (time.Duration(1) * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
 )
 
@@ -64,26 +65,56 @@ type RefreshInterval struct {
 	Duration time.Duration
 }
 
-func (r *RefreshInterval) String() string {
-	return fmt.Sprint(*r)
+func (r *RefreshInterval) SetInt(value int) error {
+	return r.SetDuration(time.Duration(value) * time.Second)
 }
 
-func (r *RefreshInterval) Set(value string) error {
-	d, err := time.ParseDuration(value)
-
-	if err != nil {
-		return err
-	}
-
+func (r *RefreshInterval) SetDuration(d time.Duration) error {
 	if d < MinimumRefreshInterval {
-		return fmt.Errorf("refresh interval must be greater than %s", MinimumRefreshInterval)
+		return fmt.Errorf("refresh interval must be greater than or equal to %s", MinimumRefreshInterval)
 	}
 	r.Duration = d
 	return nil
 }
 
+func (r *RefreshInterval) SetStr(value string) error {
+	i, err := strconv.Atoi(value)
+	if err == nil {
+		return r.SetInt(i)
+	}
+
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return fmt.Errorf("could not parse new_file_check_interval")
+	}
+	return r.SetDuration(d)
+}
+
+// Implements pflag's Value interface
+func (r *RefreshInterval) Set(value string) error {
+	return r.SetStr(value)
+}
+
+// Implements pflag's Value interface
+func (r *RefreshInterval) String() string {
+	return fmt.Sprint(*r)
+}
+
+// Implements go-yaml's Setter interface
 func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
-	err := r.Set(value.(string))
+	var err error
+
+	switch val := value.(type) {
+	default:
+		panic(fmt.Sprintf("Unexpected type \"%T\" in RefreshInterval.SetYAML", val))
+
+	case string:
+		err = r.SetStr(val)
+
+	case int:
+		err = r.SetInt(val)
+	}
+
 	if err != nil {
 		return false
 	}
@@ -92,6 +123,7 @@ func (r *RefreshInterval) SetYAML(tag string, value interface{}) bool {
 
 type RegexCollection []*regexp.Regexp
 
+// Implements pflag's Value interface
 func (r *RegexCollection) Set(value string) error {
 	exp, err := regexp.Compile(value)
 	if err != nil {
@@ -101,10 +133,12 @@ func (r *RegexCollection) Set(value string) error {
 	return nil
 }
 
+// Implements pflag's Value interface
 func (r *RegexCollection) String() string {
 	return fmt.Sprint(*r)
 }
 
+// Implements go-yaml's Setter interface
 func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
 	items, ok := value.([]interface{})
 
@@ -354,7 +388,7 @@ func (cm *ConfigManager) RefreshInterval() RefreshInterval {
 	switch {
 	case cm.Config.RefreshInterval != nil && cm.Flags.RefreshInterval.Duration != 0:
 		return cm.Flags.RefreshInterval
-	case cm.Config.RefreshInterval != nil:
+	case cm.Config.RefreshInterval != nil && cm.Config.RefreshInterval.Duration != 0:
 		return *cm.Config.RefreshInterval
 	case cm.Flags.RefreshInterval.Duration != 0:
 		return cm.Flags.RefreshInterval
