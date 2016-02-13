@@ -180,7 +180,7 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "\"logging configuration <root>=INFO;first=TRACE\"")
 	pflag.Parse()
 	for _, arg := range pflag.Args() {
-		log := strings.Split(arg, ":")
+		log := strings.Split(arg, "=")
 		if len(log) == 2 {
 			cm.FlagFiles = append(cm.FlagFiles, LogFile{Tag: log[0], Path: log[1]})
 		} else {
