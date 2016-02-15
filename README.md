@@ -251,6 +251,18 @@ contents with the program name `unique_name.log`.
 
 ## Troubleshooting
 
+### Generate debug log
+
+To output debugging events with maximum verbosity, run:
+
+```
+remote_syslog --debug-log-cfg=logfile.txt --log="<root>=DEBUG"
+```
+
+.. as well as any other arguments which are used in normal operation. This 
+will set [loggo](https://github.com/juju/loggo#func-parseconfigurationstring)'s
+root logger to the `DEBUG` level and output to `logfile.txt`.
+
 ### Truncated messages
 
 To send messages longer than 1024 characters, use TCP (either TLS or cleartext
