@@ -18,6 +18,8 @@ import (
 	"launchpad.net/goyaml"
 )
 
+var Version string
+
 const (
 	MinimumRefreshInterval = (time.Duration(10) * time.Second)
 	DefaultConfigFile      = "/etc/log_files.yml"
@@ -183,7 +185,12 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "set loggo config, like: --log=\"<root>=DEBUG\"")
 	pflag.IntVar(&cm.Flags.TcpMaxLineLength, "tcp-max-line-length", 0, "Maximum TCP line length")
+	version := pflag.Bool("version", false, "Print the remote_syslog2 version")
 	pflag.Parse()
+	if *version {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
 	for _, arg := range pflag.Args() {
 		log := strings.Split(arg, "=")
 		if len(log) == 2 {
