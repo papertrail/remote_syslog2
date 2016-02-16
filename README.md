@@ -239,15 +239,21 @@ remote_syslog uses the log file name (like "access_log") as the syslog
 program name, or what the syslog RFCs call the "tag." This is ideal unless
 remote_syslog watches many files that have the same name.
 
-In that case, tell remote_syslog to set another program name by creating
-symbolic link to the generically-named file:
+In that case, tell remote_syslog to set another program name using the
+`tag` attribute in the configuration file:
+```
+files: 
+  - path: /var/log/httpd/access_log
+    tag: apache
+destination:
+  host: logs.papertrailapp.com
+  port: 12345
+  protocol: tls
+```
+... or on the command line:
+`remote_syslog apache=/var/log/httpd/access_log`
 
-    cd /path/to/logs
-    ln -s generic_name.log unique_name.log
-
-Point `remote_syslog` at `unique_name.log`. `remote_syslog` will send its
-contents with the program name `unique_name.log`.
-
+This functionality was introduced in version 0.17
 
 ## Troubleshooting
 
