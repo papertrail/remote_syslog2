@@ -4,6 +4,7 @@ include packaging/Makefile.packaging
 .DEFAULT: build
 
 GODEP=GOPATH="`godep path`:$(GOPATH)"
+GOLDFLAGS="-X main.Version $(PACKAGE_VERSION)"
 
 X86_PLATFORMS := windows linux
 X64_PLATFORMS := windows linux darwin
@@ -20,8 +21,8 @@ package: $(BUILD_PAIRS)
 build: depend clean test
 	@echo
 	@echo "\033[32mBuilding ----> \033[m"
-	$(GODEP) gox -cgo -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
-	$(GODEP) gox -cgo -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
+	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
 
 
 clean:
