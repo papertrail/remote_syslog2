@@ -20,7 +20,7 @@
 # processname: remote_syslog
 
 prog="remote_syslog"
-config="/etc/log_files.yml"
+config="/etc/remote_syslog/log_files.yml"
 pid_dir="/var/run"
 
 EXTRAOPTIONS=""

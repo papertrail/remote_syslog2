@@ -92,8 +92,9 @@ $(BUILD_PAIRS): build
 
 	if [ "$(PLATFORM)" = "linux" ]; then\
 		mkdir -p pkg/tmp/etc/init.d;\
+		mkdir pkg/tmp/etc/remote_syslog;\
 		mkdir -p pkg/tmp/usr/local/bin;\
-		cp -f example_config.yml pkg/tmp/etc/log_files.yml;\
+		cp -f example_config.yml pkg/tmp/etc/remote_syslog/log_files.yml;\
 		cp -f packaging/linux/remote_syslog.initd pkg/tmp/etc/init.d/remote_syslog;\
 		cp -f build/$@/remote_syslog/remote_syslog pkg/tmp/usr/local/bin;\
 		(cd pkg && \
@@ -111,8 +112,8 @@ $(BUILD_PAIRS): build
 		  --url $(PACKAGE_URL) \
 		  --before-remove ../packaging/linux/deb/prerm \
 		  --after-install ../packaging/linux/deb/postinst \
-		  --config-files etc/log_files.yml \
-		  --config-files etc/init.d/remote_syslog usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog && \
+		  --config-files etc/remote_syslog/log_files.yml etc/init.d/remote_syslog \
+			usr/local/bin/remote_syslog etc/init.d/remote_syslog etc/remote_syslog/log_files.yml && \
 		fpm \
 		  -s dir \
 		  -C tmp \
@@ -127,9 +128,9 @@ $(BUILD_PAIRS): build
 		  --url $(PACKAGE_URL) \
 		  --before-remove ../packaging/linux/rpm/preun \
 		  --after-install ../packaging/linux/rpm/post \
-		  --config-files etc/log_files.yml \
+		  --config-files etc/remote_syslog/log_files.yml \
 		  --config-files etc/init.d/remote_syslog \
-		  --rpm-os linux usr/local/bin/remote_syslog etc/log_files.yml etc/init.d/remote_syslog );\
+		  --rpm-os linux usr/local/bin/remote_syslog etc/remote_syslog/log_files.yml etc/init.d/remote_syslog );\
 		rm -R -f pkg/tmp;\
 	fi
 

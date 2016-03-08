@@ -22,7 +22,7 @@ var Version string
 
 const (
 	MinimumRefreshInterval = (time.Duration(10) * time.Second)
-	DefaultConfigFile      = "/etc/log_files.yml"
+	DefaultConfigFile      = "/etc/remote_syslog/log_files.yml"
 )
 
 type LogFile struct {

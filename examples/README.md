@@ -6,7 +6,7 @@ This is an example Mac OS X plist file.  This file should be placed at `/Library
 
 ## log_files.yml.example
 
-This is a simple configuration file example.  Use it as a template for your configuration.  This file should be placed at `/etc/log_files.yml`.
+This is a simple configuration file example.  Use it as a template for your configuration.  This file should be placed at `/etc/remote_syslog/log_files.yml`.
 
 ## log_files.yml.example.advanced
 

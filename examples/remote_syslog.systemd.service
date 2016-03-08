@@ -4,7 +4,7 @@ Documentation=https://github.com/papertrail/remote_syslog2
 After=rsyslog.service
 
 [Service]
-ExecStartPre=/usr/bin/test -e /etc/log_files.yml
+ExecStartPre=/usr/bin/test -e /etc/remote_syslog/log_files.yml
 ExecStart=/usr/local/bin/remote_syslog -D
 Restart=always
 User=root
