@@ -1,4 +1,4 @@
-PACKAGE_VERSION := 0.17
+PACKAGE_VERSION := 0.17.innerteapot1
 PACKAGE_NAME := remote_syslog2
 PACKAGE_VENDOR := "Papertrail Inc."
 PACKAGE_LICENSE := "MIT License"
