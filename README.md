@@ -45,19 +45,20 @@ Untar the package, copy the "remote_syslog" executable into your $PATH,
 and then customize the included example_config.yml with the log file paths
 to read and the host/port to log to.
 
-Optionally, move and rename the configuration file to `/etc/log_files.yml` so
+Optionally, move and rename the configuration file to `/etc/remote_syslog/log_files.yml` so
 that remote_syslog picks it up automatically. For example:
 
     sudo cp ./remote_syslog /usr/local/bin
-    sudo cp example_config.yml /etc/log_files.yml
-    sudo vi /etc/log_files.yml
+    sudo mkdir /etc/remote_syslog
+    sudo cp example_config.yml /etc/remote_syslog/log_files.yml
+    sudo vi /etc/remote_syslog/log_files.yml
 
 Configuration directives can also be specified as command-line arguments (below).
 
 ## Usage
 
     Usage of remote_syslog2:
-      -c, --configfile="/etc/log_files.yml": Path to config
+      -c, --configfile="/etc/remote_syslog/log_files.yml": Path to config
           --debug-log-cfg="": the debug log file
       -d, --dest-host="": Destination syslog hostname or IP
       -p, --dest-port=514: Destination syslog port
@@ -82,7 +83,7 @@ and send to port `logs.papertrailapp.com:12345`:
 
     $ remote_syslog -c example_config.yml -p 12345 --pid-file=/tmp/remote_syslog.pid /var/log/mysqld.log
 
-Stay attached to the terminal, look for and use `/etc/log_files.yml` if it
+Stay attached to the terminal, look for and use `/etc/remote_syslog/log_files.yml` if it
 exists, and send with facility local0 to `a.example.com:514`:
 
     $ remote_syslog -D -d a.example.com -f local0 /var/log/mysqld.log
@@ -121,11 +122,11 @@ or add `protocol: tls` to your configuration file.
 
 ## Configuration
 
-By default, remote_syslog looks for a configuration in `/etc/log_files.yml`.
+By default, remote_syslog looks for a configuration in `/etc/remote_syslog/log_files.yml`.
 
 The archive comes with a [sample config](https://github.com/papertrail/remote_syslog2/blob/master/example_config.yml). Optionally:
 
-    $ cp example_config.yml.example /etc/log_files.yml
+    $ cp example_config.yml.example /etc/remote_syslog/log_files.yml
 
 `log_files.yml` has filenames to log from (as an array) and hostname and port
 to log to (as a hash). Wildcards are supported using * and standard shell
