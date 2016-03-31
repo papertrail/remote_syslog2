@@ -60,7 +60,7 @@ Configuration directives can also be specified as command-line arguments (below)
       -c, --configfile="/etc/log_files.yml": Path to config
           --debug-log-cfg="": the debug log file
       -d, --dest-host="": Destination syslog hostname or IP
-      -p, --dest-port=514: Destination syslog port
+      -p, --dest-port=0: Destination syslog port
           --eventmachine-tail=false: No action, provided for backwards compatibility
       -f, --facility="user": Facility
           --hostname="": Local hostname to send from
@@ -69,8 +69,10 @@ Configuration directives can also be specified as command-line arguments (below)
       -D, --no-detach=false: Don't daemonize and detach from the terminal
           --no-eventmachine-tail=false: No action, provided for backwards compatibility
           --pid-file="": Location of the PID file
+          --poll=false: Detect changes by polling instead of inotify
       -s, --severity="notice": Severity
           --tcp=false: Connect via TCP (no TLS)
+          --tcp-max-line-length=0: Maximum TCP line length
           --tls=false: Connect via TCP with TLS
 
 
