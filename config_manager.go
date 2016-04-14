@@ -179,7 +179,7 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.BoolVar(&cm.Flags.UseTCP, "tcp", false, "Connect via TCP (no TLS)")
 	pflag.BoolVar(&cm.Flags.UseTLS, "tls", false, "Connect via TCP with TLS")
 	pflag.BoolVar(&cm.Flags.Poll, "poll", false, "Detect changes by polling instead of inotify")
-	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
+	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files (seconds)")
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")

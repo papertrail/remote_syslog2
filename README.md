@@ -65,7 +65,7 @@ Configuration directives can also be specified as command-line arguments (below)
       -f, --facility="user": Facility
           --hostname="": Local hostname to send from
           --log="<root>=INFO": set loggo config, like: --log="<root>=DEBUG"
-          --new-file-check-interval={0}: How often to check for new files
+          --new-file-check-interval={10}: How often to check for new files
       -D, --no-detach=false: Don't daemonize and detach from the terminal
           --no-eventmachine-tail=false: No action, provided for backwards compatibility
           --pid-file="": Location of the PID file
@@ -171,11 +171,16 @@ Provide `--hostname somehostname` or use the `hostname` configuration option:
 remote_syslog automatically detects and activates new log files that match
 its file specifiers. For example, `*.log` may be provided as a file specifier,
 and remote_syslog will detect a `some.log` file created after it was started.
-Globs are re-checked every 10 seconds.
 
-Note: messages may be written to files in the 0-10 seconds between when the
+By default, globs are re-checked every 10 seconds. To check for new files more
+frequently, use the `--new-file-check-interval` argument. For example, to
+recheck globs every 1 second, use:
+
+    --new-file-check-interval 1
+
+Note: messages may be written to new files in the period between when the
 file is created and when the periodic glob check detects it. This data is not
-acted on.
+transmitted.
 
 If globs are specified on the command-line, enclose each one in single-quotes
 (`'*.log'`) so the shell passes the raw glob string to remote_syslog (rather
@@ -244,7 +249,7 @@ remote_syslog watches many files that have the same name.
 In that case, tell remote_syslog to set another program name using the
 `tag` attribute in the configuration file:
 ```
-files: 
+files:
   - path: /var/log/httpd/access_log
     tag: apache
 destination:
@@ -267,7 +272,7 @@ To output debugging events with maximum verbosity, run:
 remote_syslog --debug-log-cfg=logfile.txt --log="<root>=DEBUG"
 ```
 
-.. as well as any other arguments which are used in normal operation. This 
+.. as well as any other arguments which are used in normal operation. This
 will set [loggo](https://github.com/juju/loggo#func-parseconfigurationstring)'s
 root logger to the `DEBUG` level and output to `logfile.txt`.
 
