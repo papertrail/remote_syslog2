@@ -162,6 +162,8 @@ func (l *Logger) writePacket(p Packet) {
 		if err == nil {
 			return
 		} else {
+			// We had an error -- we need to close the connection and try again
+			l.conn.netConn.Close()
 			l.handleError(err)
 			time.Sleep(10 * time.Second)
 		}
