@@ -18,7 +18,7 @@ func TestCerts(t *testing.T) {
 
 func TestRootCA(t *testing.T) {
 	pool := RootCA()
-	expected := 154
+	expected := 155
 	actual := len(pool.Subjects())
 	if actual != expected {
 		t.Errorf("Error loading RootCA, expected %d subjects got %d", expected, actual)

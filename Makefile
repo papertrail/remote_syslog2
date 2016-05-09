@@ -1,3 +1,5 @@
+export GO15VENDOREXPERIMENT=0
+
 include packaging/Makefile.packaging
 
 .PHONY: depend clean test build tarball
@@ -7,7 +9,7 @@ GODEP=GOPATH="`godep path`:$(GOPATH)"
 GOLDFLAGS="-X main.Version $(PACKAGE_VERSION)"
 
 X86_PLATFORMS := windows linux
-X64_PLATFORMS := windows linux darwin
+X64_PLATFORMS := windows linux
 
 BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/i386 )
 BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/amd64 )
