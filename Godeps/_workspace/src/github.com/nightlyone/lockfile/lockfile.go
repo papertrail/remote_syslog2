@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 type Lockfile string
@@ -40,7 +39,7 @@ func (l Lockfile) GetOwner() (*os.Process, error) {
 	var pid int
 	_, err = fmt.Sscanln(string(content), &pid)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidPid
 	}
 
 	// try hard for pids. If no pid, the lockfile is junk anyway and we delete it.
@@ -49,23 +48,7 @@ func (l Lockfile) GetOwner() (*os.Process, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = p.Signal(os.Signal(syscall.Signal(0)))
-		if err == nil {
-			return p, nil
-		}
-		errno, ok := err.(syscall.Errno)
-		if !ok {
-			return nil, err
-		}
-
-		switch errno {
-		case syscall.ESRCH:
-			return nil, ErrDeadOwner
-		case syscall.EPERM:
-			return p, nil
-		default:
-			return nil, err
-		}
+		return p, isProcessAlive(p)
 	} else {
 		return nil, ErrInvalidPid
 	}

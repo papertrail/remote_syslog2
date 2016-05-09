@@ -37,8 +37,8 @@
 			"Rev": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
 		},
 		{
-			"ImportPath": "github.com/leonsodhi/lockfile",
-			"Rev": "c63b2cdcd236da66e05a8b9bd151ea8ed082d0db"
+			"ImportPath": "github.com/nightlyone/lockfile",
+			"Rev": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
 		},
 		{
 			"ImportPath": "github.com/ogier/pflag",
