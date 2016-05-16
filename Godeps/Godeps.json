@@ -1,11 +1,8 @@
 {
 	"ImportPath": "github.com/papertrail/remote_syslog2",
-	"GoVersion": "go1.2.1",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v62",
 	"Deps": [
-		{
-			"ImportPath": "github.com/ActiveState/tail",
-			"Rev": "c86531131426fb939fe8627ffa57a3c649f04cd4"
-		},
 		{
 			"ImportPath": "github.com/VividCortex/godaemon",
 			"Rev": "2fdf3f9fa715a998e834f09e07a8070d9046bcfd"
@@ -15,16 +12,46 @@
 			"Rev": "384be41088235af6d26ba66786fd23c45b2d5311"
 		},
 		{
-			"ImportPath": "github.com/howeyc/fsnotify",
-			"Rev": "7f0625dbb54fef2cfba674bc0dfc6c37d34bad27"
+			"ImportPath": "github.com/hpcloud/tail",
+			"Comment": "v1.0.0-35-ga30252c",
+			"Rev": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
 		},
 		{
-			"ImportPath": "github.com/leonsodhi/lockfile",
-			"Rev": "c63b2cdcd236da66e05a8b9bd151ea8ed082d0db"
+			"ImportPath": "github.com/hpcloud/tail/ratelimiter",
+			"Comment": "v1.0.0-35-ga30252c",
+			"Rev": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+		},
+		{
+			"ImportPath": "github.com/hpcloud/tail/util",
+			"Comment": "v1.0.0-35-ga30252c",
+			"Rev": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+		},
+		{
+			"ImportPath": "github.com/hpcloud/tail/watch",
+			"Comment": "v1.0.0-35-ga30252c",
+			"Rev": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+		},
+		{
+			"ImportPath": "github.com/hpcloud/tail/winfile",
+			"Comment": "v1.0.0-35-ga30252c",
+			"Rev": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+		},
+		{
+			"ImportPath": "github.com/nightlyone/lockfile",
+			"Rev": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
 		},
 		{
 			"ImportPath": "github.com/ogier/pflag",
 			"Rev": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "b776ec39b3e54652e09028aaaaac9757f4f8211a"
+		},
+		{
+			"ImportPath": "gopkg.in/fsnotify.v1",
+			"Comment": "v1.3.0",
+			"Rev": "30411dbcefb7a1da7e84f75530ad3abe4011b4f8"
 		},
 		{
 			"ImportPath": "gopkg.in/tomb.v1",

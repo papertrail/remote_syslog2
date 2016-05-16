@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ActiveState/tail"
+	"github.com/hpcloud/tail"
 	"github.com/howbazaar/loggo"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"

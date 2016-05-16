@@ -1,8 +1,9 @@
 language: go
 go:
-  - 1.3
+  - 1.6.2
 install:
   - export PATH=$HOME/gopath/bin:$PATH
+  - export GO15VENDOREXPERIMENT=0
   - go get -v -u github.com/kr/godep
 script:
   - godep go test ./...

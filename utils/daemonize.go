@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/VividCortex/godaemon"
-	"github.com/leonsodhi/lockfile"
+	"github.com/nightlyone/lockfile"
 )
 
 const CanDaemonize = true
