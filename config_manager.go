@@ -166,7 +166,7 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.StringVarP(&cm.Flags.DestHost, "dest-host", "d", "", "Destination syslog hostname or IP")
 	pflag.IntVarP(&cm.Flags.DestPort, "dest-port", "p", 0, "Destination syslog port")
 	if utils.CanDaemonize {
-		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal")
+		pflag.BoolVarP(&cm.Flags.NoDaemonize, "no-detach", "D", false, "Don't daemonize and detach from the terminal; overrides --debug-log-cfg")
 	} else {
 		cm.Flags.NoDaemonize = true
 	}
@@ -182,7 +182,7 @@ func (cm *ConfigManager) parseFlags() {
 	pflag.Var(&cm.Flags.RefreshInterval, "new-file-check-interval", "How often to check for new files")
 	_ = pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
 	_ = pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
-	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file")
+	pflag.StringVar(&cm.Flags.DebugLogFile, "debug-log-cfg", "", "the debug log file; overridden by -D/--no-detach")
 	pflag.StringVar(&cm.Flags.LogLevels, "log", "<root>=INFO", "set loggo config, like: --log=\"<root>=DEBUG\"")
 	pflag.IntVar(&cm.Flags.TcpMaxLineLength, "tcp-max-line-length", 0, "Maximum TCP line length")
 	version := pflag.Bool("version", false, "Print the remote_syslog2 version")
