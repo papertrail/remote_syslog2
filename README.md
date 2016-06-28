@@ -58,7 +58,7 @@ Configuration directives can also be specified as command-line arguments (below)
 
     Usage of remote_syslog2:
       -c, --configfile="/etc/log_files.yml": Path to config
-          --debug-log-cfg="": the debug log file
+          --debug-log-cfg="": the debug log file; overridden by -D/--no-detach
       -d, --dest-host="": Destination syslog hostname or IP
       -p, --dest-port=0: Destination syslog port
           --eventmachine-tail=false: No action, provided for backwards compatibility
@@ -66,7 +66,7 @@ Configuration directives can also be specified as command-line arguments (below)
           --hostname="": Local hostname to send from
           --log="<root>=INFO": set loggo config, like: --log="<root>=DEBUG"
           --new-file-check-interval={0}: How often to check for new files
-      -D, --no-detach=false: Don't daemonize and detach from the terminal
+      -D, --no-detach=false: Don't daemonize and detach from the terminal; overrides --debug-log-cfg
           --no-eventmachine-tail=false: No action, provided for backwards compatibility
           --pid-file="": Location of the PID file
           --poll=false: Detect changes by polling instead of inotify
@@ -244,7 +244,7 @@ remote_syslog watches many files that have the same name.
 In that case, tell remote_syslog to set another program name using the
 `tag` attribute in the configuration file:
 ```
-files: 
+files:
   - path: /var/log/httpd/access_log
     tag: apache
 destination:
@@ -267,7 +267,7 @@ To output debugging events with maximum verbosity, run:
 remote_syslog --debug-log-cfg=logfile.txt --log="<root>=DEBUG"
 ```
 
-.. as well as any other arguments which are used in normal operation. This 
+.. as well as any other arguments which are used in normal operation. This
 will set [loggo](https://github.com/juju/loggo#func-parseconfigurationstring)'s
 root logger to the `DEBUG` level and output to `logfile.txt`.
 
