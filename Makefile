@@ -10,9 +10,11 @@ GOLDFLAGS="-X main.Version $(PACKAGE_VERSION)"
 
 X86_PLATFORMS := windows linux
 X64_PLATFORMS := windows linux
+ARM_PLATFORMS := linux
 
 BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/i386 )
 BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/amd64 )
+BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/armhf )
 
 BUILD_DOCS := README.md LICENSE example_config.yml
 
@@ -25,6 +27,7 @@ build: depend clean test
 	@echo "\033[32mBuilding ----> \033[m"
 	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
 	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
+	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(ARM_PLATFORMS)" -arch="armhf" -output "build/{{.OS}}/armhf/remote_syslog/remote_syslog"
 
 
 clean:
@@ -136,5 +139,3 @@ $(BUILD_PAIRS): build
 	fi
 
 	cd build/$@ && echo `pwd` && tar -cvzf ../../../pkg/remote_syslog_$(PLATFORM)_$(ARCH).tar.gz remote_syslog
-
-
