@@ -11,12 +11,12 @@ GOLDFLAGS="-X main.Version $(PACKAGE_VERSION)"
 X86_PLATFORMS := windows linux
 X64_PLATFORMS := windows linux
 ARM_PLATFORMS := linux
-D64_PLATFORMS := darwin
+CGO_PLATFORMS := darwin
 
 BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/i386 )
 BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/amd64 )
 BUILD_PAIRS += $(foreach p,$(ARM_PLATFORMS), $(p)/armhf )
-BUILD_PAIRS += $(foreach p,$(D64_PLATFORMS), $(p)/amd64 )
+BUILD_PAIRS += $(foreach p,$(CGO_PLATFORMS), $(p)/amd64 )
 
 BUILD_DOCS := README.md LICENSE example_config.yml
 
@@ -29,7 +29,7 @@ build: depend clean test
 	$(GODEP) gox -ldflags=$(GOLDFLAGS) -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
 	$(GODEP) gox -ldflags=$(GOLDFLAGS) -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
 	$(GODEP) gox -ldflags=$(GOLDFLAGS) -os="linux" -arch="arm" -output "build/linux/armhf/remote_syslog/remote_syslog"
-	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(D64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(CGO_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
 
 
 clean:
