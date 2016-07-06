@@ -5,6 +5,6 @@ files:
   - /var/log/mysqld.log
   - /var/run/mysqld/mysqld-slow.log
 destination:
-  host: logs.papertrailapp.com
+  host: HOST.papertrailapp.com # NOTE: change this to YOUR papertrail host!
   port: 12345   # NOTE: change to your Papertrail port
   protocol: tls
