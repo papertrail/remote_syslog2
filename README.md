@@ -354,6 +354,12 @@ To run tests:
 
     make
 
+### ARM support
+
+As of 0.18, we introduced ARM support for remote_syslog2. Current ARM builds
+support all ARM platforms with hardware floating point instruction sets. This
+includes All Raspberry PI devices, most ARMv6 chips (Cortex), and ARMv7 and
+beyond. 
 
 ## Contributing
 
