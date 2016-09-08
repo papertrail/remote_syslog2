@@ -334,20 +334,20 @@ Once again, confirm that remote_syslog starts and then apply this value permanen
 
 ## Development
 
-remote_syslog2 is written in go, and uses [godep] to manage
+remote_syslog2 is written in go, and uses [govendor] to manage
 dependencies. To get everything set up, [install go][goinstall] then
 run:
 
-    go get github.com/kr/godep
+    go get github.com/kardianos/govendor
     go get github.com/mitchellh/gox
     go get github.com/papertrail/remote_syslog2
 
 To run tests:
 
     # run all tests
-    godep go test ./...
+    go test ./...
     # run all tests except the slower syslog reconnection tests
-    godep go test -short ./...
+    go test -short ./...
 
 
 ## Building
@@ -377,7 +377,7 @@ Once you've made your great commits:
 [remote_syslog]: https://github.com/papertrail/remote_syslog
 [releases]: https://github.com/papertrail/remote_syslog2/releases
 
-[godep]: https://github.com/kr/godep
+[govendor]: https://github.com/kardianos/govendor
 [goinstall]: http://golang.org/doc/install
 
 [fk]: http://help.github.com/forking/
