@@ -1,12 +1,11 @@
-export GO15VENDOREXPERIMENT=0
+export GO15VENDOREXPERIMENT=1
 
 include packaging/Makefile.packaging
 
 .PHONY: depend clean test build tarball
 .DEFAULT: build
 
-GODEP=GOPATH="`godep path`:$(GOPATH)"
-GOLDFLAGS="-X main.Version $(PACKAGE_VERSION)"
+GOLDFLAGS="-X main.Version=$(PACKAGE_VERSION)"
 
 X86_PLATFORMS := windows linux
 X64_PLATFORMS := windows linux
@@ -26,10 +25,10 @@ package: $(BUILD_PAIRS)
 build: depend clean test
 	@echo
 	@echo "\033[32mBuilding ----> \033[m"
-	$(GODEP) gox -ldflags=$(GOLDFLAGS) -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
-	$(GODEP) gox -ldflags=$(GOLDFLAGS) -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
-	$(GODEP) gox -ldflags=$(GOLDFLAGS) -os="linux" -arch="arm" -output "build/linux/armhf/remote_syslog/remote_syslog"
-	$(GODEP) gox -ldflags=$(GOLDFLAGS) -cgo -os="$(CGO_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	gox -ldflags=$(GOLDFLAGS) -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	gox -ldflags=$(GOLDFLAGS) -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
+	gox -ldflags=$(GOLDFLAGS) -os="linux" -arch="arm" -output "build/linux/armhf/remote_syslog/remote_syslog"
+	gox -ldflags=$(GOLDFLAGS) -cgo -os="$(CGO_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
 
 
 clean:
@@ -42,7 +41,7 @@ clean:
 test:
 	@echo
 	@echo "\033[32mTesting ----> \033[m"
-	$(GODEP) go test ./...
+	go test ./...
 
 
 depend:
@@ -65,9 +64,9 @@ endif
 	  exit 1; \
 	}
 
-	type godep >/dev/null 2>&1|| { \
-	  echo "\033[1;33mGodep is not installed. See https://github.com/tools/godep\033[m"; \
-	  echo "$$ go get github.com/tools/godep"; \
+	type govendor >/dev/null 2>&1|| { \
+	  echo "\033[1;33mgovendor is not installed. See https://github.com/kardianos/govendor\033[m"; \
+	  echo "$$ go get -u github.com/kardianos/govendor"; \
 	  exit 1; \
 	}
 
