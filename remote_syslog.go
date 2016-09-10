@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hpcloud/tail"
 	"github.com/howbazaar/loggo"
+	"github.com/hpcloud/tail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
 )
@@ -107,7 +107,11 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 }
 
 func main() {
-	cm := NewConfigManager()
+	cm, err := NewConfigManager()
+	if err != nil {
+		log.Criticalf("Failed to configure the application: %s", err)
+		os.Exit(1)
+	}
 
 	if cm.Daemonize() {
 		utils.Daemonize(cm.DebugLogFile(), cm.PidFile())

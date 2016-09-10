@@ -18,17 +18,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var Version string
-
 const (
-	MinimumRefreshInterval = (time.Duration(10) * time.Second)
-	DefaultConfigFile      = "/etc/log_files.yml"
+	DefaultConfigFile = "/etc/log_files.yml"
 )
-
-type LogFile struct {
-	Path string
-	Tag  string
-}
 
 type ConfigFile struct {
 	Files       []interface{}
@@ -137,16 +129,15 @@ func (r *RegexCollection) SetYAML(tag string, value interface{}) bool {
 	return true
 }
 
-func NewConfigManager() ConfigManager {
+func NewConfigManager() (ConfigManager, error) {
 	cm := ConfigManager{}
 	err := cm.Initialize()
 
 	if err != nil {
-		log.Criticalf("Failed to configure the application: %s", err)
-		os.Exit(1)
+		return cm, err
 	}
 
-	return cm
+	return cm, nil
 }
 
 func (cm *ConfigManager) Initialize() error {
