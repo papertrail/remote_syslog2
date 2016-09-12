@@ -15,7 +15,7 @@ func TestRawConfig(t *testing.T) {
 	assert := assert.New(t)
 
 	// pretend like some things were passed on the command line
-	pflag.Set("configfile", "example_config.yml")
+	pflag.Set("configfile", "test/config.yaml")
 	pflag.Set("tls", "true")
 
 	c, err := NewConfigFromEnv()
@@ -53,7 +53,7 @@ func TestRawConfig(t *testing.T) {
 	assert.Equal(c.LogLevels, "<root>=INFO")
 	assert.Equal(c.PidFile, "/var/run/rs2.pid")
 	assert.Equal(c.DebugLogFile, "/dev/null")
-	assert.Equal(c.NoDaemonize, false)
+	assert.Equal(c.NoDetach, false)
 	sev, err := syslog.Severity("notice")
 	if err != nil {
 		t.Fatal(err)

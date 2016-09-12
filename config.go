@@ -40,7 +40,7 @@ type Config struct {
 	DebugLogFile         string           `mapstructure:"debug_log_file"`
 	PidFile              string           `mapstructure:"pid_file"`
 	TcpMaxLineLength     int              `mapstructure:"tcp_max_line_length"`
-	NoDaemonize          bool             `mapstructure:"no_detach"`
+	NoDetach             bool             `mapstructure:"no_detach"`
 	TCP                  bool             `mapstructure:"tcp"`
 	TLS                  bool             `mapstructure:"tls"`
 	Files                []LogFile

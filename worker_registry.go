@@ -4,8 +4,8 @@ import (
 	"sync"
 )
 
-func NewWorkerRegistry() WorkerRegistry {
-	return WorkerRegistry{workers: make(map[string]bool)}
+func NewWorkerRegistry() *WorkerRegistry {
+	return &WorkerRegistry{workers: make(map[string]bool)}
 }
 
 type WorkerRegistry struct {
