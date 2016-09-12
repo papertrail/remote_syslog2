@@ -138,11 +138,6 @@
 			"revision": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
 		},
 		{
-			"checksumSHA1": "2+o8LUXQaShUgHi3LJoL8LH1new=",
-			"path": "github.com/ogier/pflag",
-			"revision": "fc2d9a0ef658fa4e4c319939fd6f4b6becfccb48"
-		},
-		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
 			"path": "github.com/pelletier/go-buffruneio",
 			"revision": "df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d",
