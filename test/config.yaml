@@ -1,0 +1,18 @@
+files:
+  - locallog.txt
+  - /var/log/**/*.log
+  - "nginx=/var/log/nginx/nginx.log"
+  - path: /var/log/httpd/access_log
+    tag: apache
+destination:
+  host: logs.papertrailapp.com
+  port: 514
+  protocol: tls
+exclude_patterns:
+  - don't log on me
+  - do \w+ on me
+exclude_files:
+  - \.DS_Store
+tcp_max_line_length: 99991
+connect_timeout: 5
+pid_file: "/var/run/rs2.pid"

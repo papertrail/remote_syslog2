@@ -1,7 +1,7 @@
 [Unit]
 Description=remote_syslog2
 Documentation=https://github.com/papertrail/remote_syslog2
-After=rsyslog.service
+After=network-online.target
 
 [Service]
 ExecStartPre=/usr/bin/test -e /etc/log_files.yml
