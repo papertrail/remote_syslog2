@@ -56,7 +56,7 @@ Configuration directives can also be specified as command-line arguments (below)
 
 ## Usage
 
-    Usage of ./remote_syslog/remote_syslog:
+    Usage of remote_syslog2:
       -c, --configfile string             Path to config (default "/etc/log_files.yml")
           --debug-log-cfg string          The debug log file; overridden by -D/--no-detach
       -d, --dest-host string              Destination syslog hostname or IP
