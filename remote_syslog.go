@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net"
 	"os"
 	"path"
@@ -67,7 +68,7 @@ func (s *Server) Start() error {
 }
 
 // Tails a single file
-func (s *Server) tailOne(file, tag string) {
+func (s *Server) tailOne(file, tag string, whence int) {
 	defer s.registry.Remove(file)
 	s.registry.Add(file)
 
@@ -76,7 +77,7 @@ func (s *Server) tailOne(file, tag string) {
 		Follow:    true,
 		MustExist: true,
 		Poll:      s.config.Poll,
-		Location:  &tail.SeekInfo{0, os.SEEK_END},
+		Location:  &tail.SeekInfo{0, whence},
 	})
 
 	if err != nil {
@@ -112,17 +113,17 @@ func (s *Server) tailOne(file, tag string) {
 // at the specified interval
 func (s *Server) tailFiles() {
 	log.Debugf("Evaluating globs every %s", s.config.NewFileCheckInterval)
-	logMissingFiles := true
+	firstPass := true
 
 	for {
-		s.globFiles(logMissingFiles)
+		s.globFiles(firstPass)
 		time.Sleep(s.config.NewFileCheckInterval)
-		logMissingFiles = false
+		firstPass = false
 	}
 }
 
 //
-func (s *Server) globFiles(logMissingFiles bool) {
+func (s *Server) globFiles(firstPass bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range s.config.Files {
 
@@ -131,7 +132,7 @@ func (s *Server) globFiles(logMissingFiles bool) {
 
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob.Path, err)
-		} else if files == nil && logMissingFiles {
+		} else if files == nil && firstPass {
 			log.Errorf("Cannot forward %s, it may not exist", glob.Path)
 		}
 
@@ -143,7 +144,15 @@ func (s *Server) globFiles(logMissingFiles bool) {
 				log.Debugf("Skipping %s because it is excluded by regular expression", file)
 			default:
 				log.Infof("Forwarding %s", file)
-				go s.tailOne(file, tag)
+
+				whence := io.SeekStart
+
+				// don't read the entire file on startup
+				if firstPass {
+					whence = io.SeekEnd
+				}
+
+				go s.tailOne(file, tag, whence)
 			}
 		}
 	}
