@@ -104,13 +104,13 @@ func init() {
 	pflag.Bool("poll", false, "Detect changes by polling instead of inotify")
 	config.BindPFlag("poll", pflag.Lookup("poll"))
 
-	pflag.Int("new-file-check-interval", 10, "How often to check for new files")
+	pflag.Int("new-file-check-interval", 10, "How often to check for new files (seconds)")
 	config.BindPFlag("new_file_check_interval", pflag.Lookup("new-file-check-interval"))
 
-	pflag.String("debug-log-cfg", "", "the debug log file; overridden by -D/--no-detach")
+	pflag.String("debug-log-cfg", "", "The debug log file; overridden by -D/--no-detach")
 	config.BindPFlag("debug_log_file", pflag.Lookup("debug-log-cfg"))
 
-	pflag.String("log", "<root>=INFO", "set loggo config, like: --log=\"<root>=DEBUG\"")
+	pflag.String("log", "<root>=INFO", "Set loggo config, like: --log=\"<root>=DEBUG\"")
 	config.BindPFlag("log_levels", pflag.Lookup("log"))
 
 	// only present this flag to systems that can daemonize
