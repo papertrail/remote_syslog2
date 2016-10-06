@@ -61,8 +61,8 @@ func dial(network, raddr string, rootCAs *x509.CertPool, connectTimeout time.Dur
 			config = &tls.Config{RootCAs: rootCAs}
 		}
 		dialer := &net.Dialer{
-			Timeout: connectTimeout,
-			KeepAlive:time.Second * 60 * 3, // 3 minutes
+			Timeout:   connectTimeout,
+			KeepAlive: time.Second * 60 * 3, // 3 minutes
 		}
 		netConn, err = tls.DialWithDialer(dialer, "tcp", raddr, config)
 	case "udp", "tcp":
