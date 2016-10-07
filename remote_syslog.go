@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/howbazaar/loggo"
@@ -16,18 +18,25 @@ import (
 	"github.com/papertrail/remote_syslog2/utils"
 )
 
-var log = loggo.GetLogger("")
+var (
+	log = loggo.GetLogger("")
+	_   = fmt.Printf
+)
 
 type Server struct {
 	config   *Config
 	logger   *syslog.Logger
 	registry *WorkerRegistry
+	stopChan chan struct{}
+	stopped  bool
+	mu       sync.RWMutex
 }
 
 func NewServer(config *Config) *Server {
 	return &Server{
 		config:   config,
 		registry: NewWorkerRegistry(),
+		stopChan: make(chan struct{}),
 	}
 }
 
@@ -67,6 +76,26 @@ func (s *Server) Start() error {
 	return nil
 }
 
+func (s *Server) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.stopped {
+		s.stopped = true
+		s.stopChan <- struct{}{}
+
+		log.Infof("Shutting down...")
+		s.logger.Close()
+	}
+}
+
+func (s *Server) closing() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.stopped
+}
+
 // Tails a single file
 func (s *Server) tailOne(file, tag string, whence int) {
 	defer s.registry.Remove(file)
@@ -89,24 +118,41 @@ func (s *Server) tailOne(file, tag string, whence int) {
 		tag = path.Base(file)
 	}
 
-	for line := range t.Lines {
-		if !matchExps(line.Text, s.config.ExcludePatterns) {
-			s.logger.Packets <- syslog.Packet{
-				Severity: s.config.Severity,
-				Facility: s.config.Facility,
-				Time:     time.Now(),
-				Hostname: s.logger.ClientHostname,
-				Tag:      tag,
-				Message:  line.Text,
+	for {
+		select {
+		case line := <-t.Lines:
+			if s.closing() {
+				return
 			}
-			log.Tracef("Forwarding: %s", line.Text)
-		} else {
-			log.Tracef("Not Forwarding: %s", line.Text)
-		}
 
+			if !matchExps(line.Text, s.config.ExcludePatterns) {
+				log.Tracef("foo: %s", line.Text)
+				err := s.logger.Write(syslog.Packet{
+					Severity: s.config.Severity,
+					Facility: s.config.Facility,
+					Time:     time.Now(),
+					Hostname: s.logger.ClientHostname,
+					Tag:      tag,
+					Message:  line.Text,
+				})
+
+				if err != nil {
+					log.Errorf("%s", err)
+					return
+				}
+
+				log.Tracef("Forwarding line: %s", line.Text)
+
+			} else {
+				log.Tracef("Not Forwarding line: %s", line.Text)
+			}
+
+		case <-s.stopChan:
+			return
+		}
 	}
 
-	log.Errorf("Tail worker executed abnormally")
+	return
 }
 
 // Tails files speficied in the globs and re-evaluates the globs
@@ -116,6 +162,10 @@ func (s *Server) tailFiles() {
 	firstPass := true
 
 	for {
+		if s.closing() {
+			return
+		}
+
 		s.globFiles(firstPass)
 		time.Sleep(s.config.NewFileCheckInterval)
 		firstPass = false
@@ -143,7 +193,7 @@ func (s *Server) globFiles(firstPass bool) {
 			case matchExps(file, s.config.ExcludeFiles):
 				log.Debugf("Skipping %s because it is excluded by regular expression", file)
 			default:
-				log.Infof("Forwarding %s", file)
+				log.Infof("Forwarding file: %s", file)
 
 				whence := io.SeekStart
 

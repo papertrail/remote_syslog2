@@ -127,6 +127,7 @@ func init() {
 	config.AutomaticEnv()
 }
 
+// Read in configuration from environment, flags, and specified or default config file.
 func NewConfigFromEnv() (*Config, error) {
 	pflag.Parse()
 
