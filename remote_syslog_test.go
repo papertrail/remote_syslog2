@@ -78,8 +78,8 @@ func TestNewFileSeek(t *testing.T) {
 
 		writeLog(file, msg)
 
-		packet := readPacket()
-		assert.Equal(msg, packet.Message)
+		// NewFileCheckInterval = 1 second, so wait 1100ms for messages
+		assert.Equal(msg, readPacket(1100*time.Millisecond).Message)
 	}
 }
 
@@ -104,17 +104,11 @@ func tmpLogFile() *os.File {
 	return file
 }
 
-func readPacket() syslog.Packet {
-	listener.SetReadDeadline(time.Now().Add(1200 * time.Millisecond))
-	reader := bufio.NewReaderSize(listener, 1024*32)
+func readPacket(wait time.Duration) syslog.Packet {
+	listener.SetReadDeadline(time.Now().Add(wait))
 
-	line, prefix, err := reader.ReadLine()
-	if prefix {
-		panic("reader buffer too small")
-	}
-	if err != nil {
-		panic(err)
-	}
+	reader := bufio.NewReaderSize(listener, 1024*32)
+	line, _, _ := reader.ReadLine()
 
 	packet, err := syslog.Parse(string(line))
 	if err != nil {
