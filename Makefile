@@ -36,12 +36,13 @@ clean:
 	@echo "\033[32mCleaning Build ----> \033[m"
 	$(RM) -rf pkg/*
 	$(RM) -rf build/*
+	$(RM) -rf tmp/*
 
 
 test:
 	@echo
 	@echo "\033[32mTesting ----> \033[m"
-	go test ./...
+	go test -v -race ./...
 
 
 depend:

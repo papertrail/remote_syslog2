@@ -10,10 +10,16 @@ import (
 	_ "crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
+)
+
+var (
+	ErrConnectionClosed = errors.New("remote syslog connection has been closed")
 )
 
 // A net.Conn with added reconnection logic
@@ -47,6 +53,10 @@ func (c *conn) reconnectNeeded() bool {
 	default:
 		return false
 	}
+}
+
+func (c *conn) Close() error {
+	return c.netConn.Close()
 }
 
 // dial connects to the server and set up a watching goroutine
@@ -92,6 +102,8 @@ type Logger struct {
 	connectTimeout   time.Duration
 	writeTimeout     time.Duration
 	tcpMaxLineLength int
+	mu               sync.Mutex
+	stopChan         chan struct{}
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
@@ -111,9 +123,37 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 		writeTimeout:     writeTimeout,
 		conn:             conn,
 		tcpMaxLineLength: tcpMaxLineLength,
+		stopChan:         make(chan struct{}, 1),
 	}
 	go logger.writeLoop()
 	return logger, err
+}
+
+func (l *Logger) Write(packet Packet) error {
+	if l.conn == nil {
+		return ErrConnectionClosed
+	}
+
+	l.Packets <- packet
+	return nil
+}
+
+func (l *Logger) Close() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.conn != nil {
+		l.stopChan <- struct{}{}
+
+		err := l.conn.Close()
+		l.conn = nil
+
+		close(l.Errors)
+
+		return err
+	}
+
+	return nil
 }
 
 // Connect to the server, retrying every 10 seconds until successful.
@@ -172,7 +212,12 @@ func (l *Logger) writePacket(p Packet) {
 
 // writeloop writes any packets recieved on l.Packets() to the syslog server.
 func (l *Logger) writeLoop() {
-	for p := range l.Packets {
-		l.writePacket(p)
+	for {
+		select {
+		case p := <-l.Packets:
+			l.writePacket(p)
+		case <-l.stopChan:
+			return
+		}
 	}
 }

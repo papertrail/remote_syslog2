@@ -1,6 +1,6 @@
 language: go
 go:
-  - 1.6.2
+  - tip
 install:
   - export PATH=$HOME/gopath/bin:$PATH
   - export GO15VENDOREXPERIMENT=1

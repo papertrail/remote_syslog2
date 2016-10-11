@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/howbazaar/loggo"
@@ -15,18 +18,25 @@ import (
 	"github.com/papertrail/remote_syslog2/utils"
 )
 
-var log = loggo.GetLogger("")
+var (
+	log = loggo.GetLogger("")
+	_   = fmt.Printf
+)
 
 type Server struct {
 	config   *Config
 	logger   *syslog.Logger
 	registry *WorkerRegistry
+	stopChan chan struct{}
+	stopped  bool
+	mu       sync.RWMutex
 }
 
 func NewServer(config *Config) *Server {
 	return &Server{
 		config:   config,
 		registry: NewWorkerRegistry(),
+		stopChan: make(chan struct{}),
 	}
 }
 
@@ -66,8 +76,28 @@ func (s *Server) Start() error {
 	return nil
 }
 
+func (s *Server) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.stopped {
+		s.stopped = true
+		s.stopChan <- struct{}{}
+
+		log.Infof("Shutting down...")
+		s.logger.Close()
+	}
+}
+
+func (s *Server) closing() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.stopped
+}
+
 // Tails a single file
-func (s *Server) tailOne(file, tag string) {
+func (s *Server) tailOne(file, tag string, whence int) {
 	defer s.registry.Remove(file)
 	s.registry.Add(file)
 
@@ -76,7 +106,7 @@ func (s *Server) tailOne(file, tag string) {
 		Follow:    true,
 		MustExist: true,
 		Poll:      s.config.Poll,
-		Location:  &tail.SeekInfo{0, os.SEEK_END},
+		Location:  &tail.SeekInfo{0, whence},
 	})
 
 	if err != nil {
@@ -88,41 +118,62 @@ func (s *Server) tailOne(file, tag string) {
 		tag = path.Base(file)
 	}
 
-	for line := range t.Lines {
-		if !matchExps(line.Text, s.config.ExcludePatterns) {
-			s.logger.Packets <- syslog.Packet{
-				Severity: s.config.Severity,
-				Facility: s.config.Facility,
-				Time:     time.Now(),
-				Hostname: s.logger.ClientHostname,
-				Tag:      tag,
-				Message:  line.Text,
+	for {
+		select {
+		case line := <-t.Lines:
+			if s.closing() {
+				return
 			}
-			log.Tracef("Forwarding: %s", line.Text)
-		} else {
-			log.Tracef("Not Forwarding: %s", line.Text)
-		}
 
+			if !matchExps(line.Text, s.config.ExcludePatterns) {
+				log.Tracef("foo: %s", line.Text)
+				err := s.logger.Write(syslog.Packet{
+					Severity: s.config.Severity,
+					Facility: s.config.Facility,
+					Time:     time.Now(),
+					Hostname: s.logger.ClientHostname,
+					Tag:      tag,
+					Message:  line.Text,
+				})
+
+				if err != nil {
+					log.Errorf("%s", err)
+					return
+				}
+
+				log.Tracef("Forwarding line: %s", line.Text)
+
+			} else {
+				log.Tracef("Not Forwarding line: %s", line.Text)
+			}
+
+		case <-s.stopChan:
+			return
+		}
 	}
 
-	log.Errorf("Tail worker executed abnormally")
+	return
 }
 
 // Tails files speficied in the globs and re-evaluates the globs
 // at the specified interval
 func (s *Server) tailFiles() {
 	log.Debugf("Evaluating globs every %s", s.config.NewFileCheckInterval)
-	logMissingFiles := true
+	firstPass := true
 
 	for {
-		s.globFiles(logMissingFiles)
+		if s.closing() {
+			return
+		}
+
+		s.globFiles(firstPass)
 		time.Sleep(s.config.NewFileCheckInterval)
-		logMissingFiles = false
+		firstPass = false
 	}
 }
 
 //
-func (s *Server) globFiles(logMissingFiles bool) {
+func (s *Server) globFiles(firstPass bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range s.config.Files {
 
@@ -131,7 +182,7 @@ func (s *Server) globFiles(logMissingFiles bool) {
 
 		if err != nil {
 			log.Errorf("Failed to glob %s: %s", glob.Path, err)
-		} else if files == nil && logMissingFiles {
+		} else if files == nil && firstPass {
 			log.Errorf("Cannot forward %s, it may not exist", glob.Path)
 		}
 
@@ -142,8 +193,16 @@ func (s *Server) globFiles(logMissingFiles bool) {
 			case matchExps(file, s.config.ExcludeFiles):
 				log.Debugf("Skipping %s because it is excluded by regular expression", file)
 			default:
-				log.Infof("Forwarding %s", file)
-				go s.tailOne(file, tag)
+				log.Infof("Forwarding file: %s", file)
+
+				whence := io.SeekStart
+
+				// don't read the entire file on startup
+				if firstPass {
+					whence = io.SeekEnd
+				}
+
+				go s.tailOne(file, tag, whence)
 			}
 		}
 	}
