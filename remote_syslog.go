@@ -64,7 +64,7 @@ func (s *Server) Start() error {
 		s.config.TcpMaxLineLength,
 	)
 	if err != nil {
-		log.Errorf("Cannot connect to server: %v", err)
+		log.Errorf("Initial connection to server failed: %v - connection will be retried", err)
 	}
 
 	go s.tailFiles()
@@ -223,5 +223,8 @@ func main() {
 	utils.AddSignalHandlers()
 
 	s := NewServer(c)
-	s.Start()
+	if err = s.Start(); err != nil {
+		log.Criticalf("Failed to start server: %v", err)
+		os.Exit(255)
+	}
 }
