@@ -21,11 +21,13 @@ import (
 
 var (
 	config  *viper.Viper
+	flags   *pflag.FlagSet
 	Version string
 )
 
 const (
-	envPrefix = "rsyslog2"
+	envPrefix         = "rsyslog2"
+	defaultConfigFile = "/etc/log_files.yml"
 )
 
 // The global Config object for remote_syslog2 server. "mapstructure" tags
@@ -62,6 +64,12 @@ type LogFile struct {
 }
 
 func init() {
+	initConfigAndFlags()
+}
+
+func initConfigAndFlags() {
+	flags = pflag.NewFlagSet(envPrefix, pflag.ExitOnError)
+
 	config = viper.New()
 	config.SetEnvPrefix(envPrefix)
 
@@ -73,55 +81,55 @@ func init() {
 	config.SetDefault("write_timeout", 30*time.Second)
 
 	// set available commandline flags here:
-	pflag.StringP("configfile", "c", "/etc/log_files.yml", "Path to config")
-	config.BindPFlag("config_file", pflag.Lookup("configfile"))
+	flags.StringP("configfile", "c", defaultConfigFile, "Path to config")
+	config.BindPFlag("config_file", flags.Lookup("configfile"))
 
-	pflag.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
-	config.BindPFlag("destination.host", pflag.Lookup("dest-host"))
+	flags.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
+	config.BindPFlag("destination.host", flags.Lookup("dest-host"))
 
-	pflag.IntP("dest-port", "p", 514, "Destination syslog port")
-	config.BindPFlag("destination.port", pflag.Lookup("dest-port"))
+	flags.IntP("dest-port", "p", 514, "Destination syslog port")
+	config.BindPFlag("destination.port", flags.Lookup("dest-port"))
 
-	pflag.StringP("facility", "f", "user", "Facility")
-	config.BindPFlag("facility", pflag.Lookup("facility"))
+	flags.StringP("facility", "f", "user", "Facility")
+	config.BindPFlag("facility", flags.Lookup("facility"))
 
 	hostname, _ := os.Hostname()
-	pflag.String("hostname", hostname, "Local hostname to send from")
-	config.BindPFlag("hostname", pflag.Lookup("hostname"))
+	flags.String("hostname", hostname, "Local hostname to send from")
+	config.BindPFlag("hostname", flags.Lookup("hostname"))
 
-	pflag.String("pid-file", "", "Location of the PID file")
-	config.BindPFlag("pid_file", pflag.Lookup("pid-file"))
+	flags.String("pid-file", "", "Location of the PID file")
+	config.BindPFlag("pid_file", flags.Lookup("pid-file"))
 
-	pflag.StringP("severity", "s", "notice", "Severity")
-	config.BindPFlag("severity", pflag.Lookup("severity"))
+	flags.StringP("severity", "s", "notice", "Severity")
+	config.BindPFlag("severity", flags.Lookup("severity"))
 
-	pflag.Bool("tcp", false, "Connect via TCP (no TLS)")
-	config.BindPFlag("tcp", pflag.Lookup("tcp"))
+	flags.Bool("tcp", false, "Connect via TCP (no TLS)")
+	config.BindPFlag("tcp", flags.Lookup("tcp"))
 
-	pflag.Bool("tls", false, "Connect via TCP with TLS")
-	config.BindPFlag("tls", pflag.Lookup("tls"))
+	flags.Bool("tls", false, "Connect via TCP with TLS")
+	config.BindPFlag("tls", flags.Lookup("tls"))
 
-	pflag.Bool("poll", false, "Detect changes by polling instead of inotify")
-	config.BindPFlag("poll", pflag.Lookup("poll"))
+	flags.Bool("poll", false, "Detect changes by polling instead of inotify")
+	config.BindPFlag("poll", flags.Lookup("poll"))
 
-	pflag.Int("new-file-check-interval", 10, "How often to check for new files (seconds)")
-	config.BindPFlag("new_file_check_interval", pflag.Lookup("new-file-check-interval"))
+	flags.Int("new-file-check-interval", 10, "How often to check for new files (seconds)")
+	config.BindPFlag("new_file_check_interval", flags.Lookup("new-file-check-interval"))
 
-	pflag.String("debug-log-cfg", "", "The debug log file; overridden by -D/--no-detach")
-	config.BindPFlag("debug_log_file", pflag.Lookup("debug-log-cfg"))
+	flags.String("debug-log-cfg", "", "The debug log file; overridden by -D/--no-detach")
+	config.BindPFlag("debug_log_file", flags.Lookup("debug-log-cfg"))
 
-	pflag.String("log", "<root>=INFO", "Set loggo config, like: --log=\"<root>=DEBUG\"")
-	config.BindPFlag("log_levels", pflag.Lookup("log"))
+	flags.String("log", "<root>=INFO", "Set loggo config, like: --log=\"<root>=DEBUG\"")
+	config.BindPFlag("log_levels", flags.Lookup("log"))
 
 	// only present this flag to systems that can daemonize
 	if utils.CanDaemonize {
-		pflag.BoolP("no-detach", "D", false, "Don't daemonize and detach from the terminal; overrides --debug-log-cfg")
-		config.BindPFlag("no_detach", pflag.Lookup("no-detach"))
+		flags.BoolP("no-detach", "D", false, "Don't daemonize and detach from the terminal; overrides --debug-log-cfg")
+		config.BindPFlag("no_detach", flags.Lookup("no-detach"))
 	}
 
 	// deprecated flags
-	pflag.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
-	pflag.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
+	flags.Bool("no-eventmachine-tail", false, "No action, provided for backwards compatibility")
+	flags.Bool("eventmachine-tail", false, "No action, provided for backwards compatibility")
 
 	// bind env vars to config automatically
 	config.AutomaticEnv()
@@ -129,13 +137,14 @@ func init() {
 
 // Read in configuration from environment, flags, and specified or default config file.
 func NewConfigFromEnv() (*Config, error) {
-	pflag.Parse()
+	flags.Parse(os.Args[1:])
 
 	c := &Config{}
 
 	// read in config file if it's there
-	config.SetConfigFile(config.GetString("config_file"))
-	if err := config.ReadInConfig(); err != nil {
+	configFile := config.GetString("config_file")
+	config.SetConfigFile(configFile)
+	if err := config.ReadInConfig(); err != nil && configFile != defaultConfigFile {
 		return nil, err
 	}
 
@@ -158,6 +167,11 @@ func NewConfigFromEnv() (*Config, error) {
 		return nil, err
 	}
 
+	// explicitly set destination fields since they are nested
+	c.Destination.Host = config.GetString("destination.host")
+	c.Destination.Port = config.GetInt("destination.port")
+	c.Destination.Protocol = config.GetString("destination.protocol")
+
 	// explicitly set destination protocol if we've asked for tcp or tls
 	if c.TLS {
 		c.Destination.Protocol = "tls"
@@ -177,7 +191,7 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	// collect any extra args passed on the command line and add them to our file list
-	for _, file := range pflag.Args() {
+	for _, file := range flags.Args() {
 		files, err := decodeLogFiles([]interface{}{file})
 		if err != nil {
 			return nil, err
