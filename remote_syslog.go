@@ -65,10 +65,6 @@ func (s *Server) Start() error {
 	)
 	if err != nil {
 		log.Errorf("Cannot connect to server: %v", err)
-		// If the first dial fails, the connection will stay uninitialized (nil)
-		// and all subsequent attempts to reconnect will also fail.
-		// Instead of continuing, bail out at this error
-		return err
 	}
 
 	go s.tailFiles()
@@ -232,8 +228,5 @@ func main() {
 	utils.AddSignalHandlers()
 
 	s := NewServer(c)
-	if err = s.Start(); err != nil {
-		log.Criticalf("Failed to start server: %v", err)
-		os.Exit(255)
-	}
+	s.Start()
 }
