@@ -64,11 +64,7 @@ func (s *Server) Start() error {
 		s.config.TcpMaxLineLength,
 	)
 	if err != nil {
-		log.Errorf("Cannot connect to server: %v", err)
-		// If the first dial fails, the connection will stay uninitialized (nil)
-		// and all subsequent attempts to reconnect will also fail.
-		// Instead of continuing, bail out at this error
-		return err
+		log.Errorf("Initial connection to server failed: %v - connection will be retried", err)
 	}
 
 	go s.tailFiles()
@@ -130,7 +126,7 @@ func (s *Server) tailOne(file, tag string, whence int) {
 			}
 
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
-				err := s.logger.Write(syslog.Packet{
+				s.logger.Write(syslog.Packet{
 					Severity: s.config.Severity,
 					Facility: s.config.Facility,
 					Time:     time.Now(),
@@ -138,11 +134,6 @@ func (s *Server) tailOne(file, tag string, whence int) {
 					Tag:      tag,
 					Message:  line.Text,
 				})
-
-				if err != nil {
-					log.Errorf("%s", err)
-					return
-				}
 
 				log.Tracef("Forwarding line: %s", line.Text)
 
