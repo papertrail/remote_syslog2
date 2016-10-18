@@ -7,16 +7,16 @@ import (
 
 	"github.com/papertrail/remote_syslog2/papertrail"
 	"github.com/papertrail/remote_syslog2/syslog"
-	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRawConfig(t *testing.T) {
 	assert := assert.New(t)
+	initConfigAndFlags()
 
 	// pretend like some things were passed on the command line
-	pflag.Set("configfile", "test/config.yaml")
-	pflag.Set("tls", "true")
+	flags.Set("configfile", "test/config.yaml")
+	flags.Set("tls", "true")
 
 	c, err := NewConfigFromEnv()
 	if err != nil {
@@ -67,4 +67,22 @@ func TestRawConfig(t *testing.T) {
 	assert.NotEqual(c.Hostname, "")
 	assert.Equal(c.Poll, false)
 	assert.Equal(c.RootCAs, papertrail.RootCA())
+}
+
+func TestNoConfigFile(t *testing.T) {
+	assert := assert.New(t)
+	initConfigAndFlags()
+
+	flags.Set("dest-host", "localhost")
+	flags.Set("dest-port", "999")
+
+	c, err := NewConfigFromEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NoError(c.Validate())
+	assert.Equal("localhost", c.Destination.Host)
+	assert.Equal(999, c.Destination.Port)
+	assert.Equal("udp", c.Destination.Protocol)
 }
