@@ -138,7 +138,7 @@ func (l *Logger) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if l.conn != nil {
+	if !l.stopped {
 		l.stopped = true
 		l.stopChan <- struct{}{}
 
