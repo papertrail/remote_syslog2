@@ -130,7 +130,6 @@ func (s *Server) tailOne(file, tag string, whence int) {
 			}
 
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
-				log.Tracef("foo: %s", line.Text)
 				err := s.logger.Write(syslog.Packet{
 					Severity: s.config.Severity,
 					Facility: s.config.Facility,
