@@ -126,7 +126,7 @@ func (s *Server) tailOne(file, tag string, whence int) {
 			}
 
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
-				err := s.logger.Write(syslog.Packet{
+				s.logger.Write(syslog.Packet{
 					Severity: s.config.Severity,
 					Facility: s.config.Facility,
 					Time:     time.Now(),
@@ -134,11 +134,6 @@ func (s *Server) tailOne(file, tag string, whence int) {
 					Tag:      tag,
 					Message:  line.Text,
 				})
-
-				if err != nil {
-					log.Errorf("%s", err)
-					return
-				}
 
 				log.Tracef("Forwarding line: %s", line.Text)
 

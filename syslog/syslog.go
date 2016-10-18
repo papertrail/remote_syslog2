@@ -10,16 +10,11 @@ import (
 	_ "crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"sync"
 	"time"
-)
-
-var (
-	ErrConnectionClosed = errors.New("remote syslog connection has been closed")
 )
 
 // A net.Conn with added reconnection logic
@@ -105,6 +100,7 @@ type Logger struct {
 	tcpMaxLineLength int
 	mu               sync.Mutex
 	stopChan         chan struct{}
+	stopped          bool
 }
 
 // Dial connects to the syslog server at raddr, using the optional certBundle,
@@ -130,13 +126,12 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 	return logger, err
 }
 
-func (l *Logger) Write(packet Packet) error {
-	if l.conn == nil {
-		return ErrConnectionClosed
+func (l *Logger) Write(packet Packet) {
+	if l.stopped {
+		return
 	}
 
 	l.Packets <- packet
-	return nil
 }
 
 func (l *Logger) Close() error {
@@ -144,6 +139,7 @@ func (l *Logger) Close() error {
 	defer l.mu.Unlock()
 
 	if l.conn != nil {
+		l.stopped = true
 		l.stopChan <- struct{}{}
 
 		err := l.conn.Close()
