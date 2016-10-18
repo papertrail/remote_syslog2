@@ -25,7 +25,8 @@ var (
 )
 
 const (
-	envPrefix = "rsyslog2"
+	envPrefix         = "rsyslog2"
+	defaultConfigFile = "/etc/log_files.yml"
 )
 
 // The global Config object for remote_syslog2 server. "mapstructure" tags
@@ -73,7 +74,7 @@ func init() {
 	config.SetDefault("write_timeout", 30*time.Second)
 
 	// set available commandline flags here:
-	pflag.StringP("configfile", "c", "/etc/log_files.yml", "Path to config")
+	pflag.StringP("configfile", "c", defaultConfigFile, "Path to config")
 	config.BindPFlag("config_file", pflag.Lookup("configfile"))
 
 	pflag.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
@@ -134,8 +135,9 @@ func NewConfigFromEnv() (*Config, error) {
 	c := &Config{}
 
 	// read in config file if it's there
-	config.SetConfigFile(config.GetString("config_file"))
-	if err := config.ReadInConfig(); err != nil {
+	configFile := config.GetString("config_file")
+	config.SetConfigFile(configFile)
+	if err := config.ReadInConfig(); err != nil && configFile != defaultConfigFile {
 		return nil, err
 	}
 
@@ -157,6 +159,11 @@ func NewConfigFromEnv() (*Config, error) {
 	if err = decoder.Decode(config.AllSettings()); err != nil {
 		return nil, err
 	}
+
+	// explicitly set destination fields since they are nested
+	c.Destination.Host = config.GetString("destination.host")
+	c.Destination.Port = config.GetInt("destination.port")
+	c.Destination.Protocol = config.GetString("destination.protocol")
 
 	// explicitly set destination protocol if we've asked for tcp or tls
 	if c.TLS {
