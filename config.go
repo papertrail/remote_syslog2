@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,13 +21,16 @@ import (
 )
 
 var (
-	config  *viper.Viper
-	flags   *pflag.FlagSet
+	config *viper.Viper
+	flags  *pflag.FlagSet
+
 	Version string
+
+	ErrUsage = errors.New("usage")
 )
 
 const (
-	envPrefix         = "rsyslog2"
+	envPrefix         = "remote_syslog"
 	defaultConfigFile = "/etc/log_files.yml"
 )
 
@@ -79,6 +83,10 @@ func initConfigAndFlags() {
 	config.SetDefault("debug_log_file", "/dev/null")
 	config.SetDefault("connect_timeout", 30*time.Second)
 	config.SetDefault("write_timeout", 30*time.Second)
+
+	// flag-only "configuration" values (help and version)
+	flags.BoolP("help", "h", false, "Display this help message")
+	flags.BoolP("version", "V", false, "Display version and exit")
 
 	// set available commandline flags here:
 	flags.StringP("configfile", "c", defaultConfigFile, "Path to config")
@@ -137,7 +145,19 @@ func initConfigAndFlags() {
 
 // Read in configuration from environment, flags, and specified or default config file.
 func NewConfigFromEnv() (*Config, error) {
-	flags.Parse(os.Args[1:])
+	if err := flags.Parse(os.Args[1:]); err != nil {
+		return nil, err
+	}
+
+	if h, _ := flags.GetBool("help"); h {
+		usage()
+		return nil, ErrUsage
+	}
+
+	if v, _ := flags.GetBool("version"); v {
+		version()
+		return nil, ErrUsage
+	}
 
 	c := &Config{}
 
@@ -373,4 +393,13 @@ func getPidFile() string {
 	}
 
 	return "/tmp/remote_syslog.pid"
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s %s:\n", envPrefix, Version)
+	flags.PrintDefaults()
+}
+
+func version() {
+	fmt.Fprintf(os.Stderr, "%s %s\n", envPrefix, Version)
 }

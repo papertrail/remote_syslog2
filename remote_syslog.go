@@ -216,6 +216,10 @@ func matchExps(value string, expressions []*regexp.Regexp) bool {
 func main() {
 	c, err := NewConfigFromEnv()
 	if err != nil {
+		if err == ErrUsage {
+			os.Exit(0)
+		}
+
 		log.Criticalf("Failed to configure the application: %s", err)
 		os.Exit(1)
 	}
