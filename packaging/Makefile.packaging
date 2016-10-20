@@ -1,8 +1,6 @@
-PACKAGE_VERSION := 0.19a
 PACKAGE_NAME := remote_syslog2
 PACKAGE_VENDOR := "Papertrail Inc."
 PACKAGE_LICENSE := "MIT License"
 PACKAGE_CONTACT := support@papertrailapp.com
 PACKAGE_DESCRIPTION := "Lightweight self-contained daemon for reading local files and emitting remote syslog (without using local syslog daemon)"
 PACKAGE_URL := https://github.com/papertrail/remote_syslog2
-

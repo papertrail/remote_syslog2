@@ -49,6 +49,11 @@ depend:
 	@echo
 	@echo "\033[32mChecking Dependencies ----> \033[m"
 
+ifndef PACKAGE_VERSION
+	@echo "\033[1;33mPACKAGE_VERSION is not set. In order to build a package I need PACKAGE_VERSION=n\033[m"
+	exit 1;
+endif
+
 ifndef GOPATH
 	@echo "\033[1;33mGOPATH is not set. This means that you do not have go setup properly on this machine\033[m"
 	@echo "$$ mkdir ~/gocode";

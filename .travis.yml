@@ -1,5 +1,4 @@
 language: go
-
 go:
   - tip
 
@@ -10,14 +9,17 @@ install:
 script:
   - make test
 
+# This assumes that git tags start with "v", e.g. v0.19
 before_deploy:
-  - make build
+  - PACKAGE_VERSION=${TRAVIS_TAG:1} make build
 
-deploy:  
+deploy:
   provider: releases
-  api_key: ${GITHUB_KEY}
-  file_glob: true
-  file: "pkg/remote_syslog*"
   skip_cleanup: true
+  api_key:
+    secure: d3jdocN7D2L3I/Uwj2vIlMGId59zxi1UKxn3AsSC3WERbc9N0m781HmfJe5iD7GW7fp/os1kswb2mtGKLXluNliEOpYutOPlvtQNw8GyovNwK08aeyWm/+oxul36rLnAN81aPBAY11mKKaU0gJOv6Q79yq8ew6OY8D6UdZRyypY=
+  file: "pkg/remote_syslog*"
+  file_glob: true
   on:
     tags: true
+    condition: ${TRAVIS_TAG:0:1} = "v"
