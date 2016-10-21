@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,7 +101,7 @@ func TestGlobCollisions(t *testing.T) {
 	// Setup a test logger so we can observe the server's behavior
 	_, _, err := loggo.RemoveWriter("default")
 	assert.NoError(err)
-	sink := new(loggo.TestWriter)
+	sink := new(testWriter)
 	loggo.RegisterWriter("default", sink, loggo.TRACE)
 
 	s := NewServer(config)
@@ -120,7 +122,7 @@ func TestGlobCollisions(t *testing.T) {
 	time.Sleep(3000 * time.Millisecond)
 
 	var forwardCount int
-	for _, l := range sink.Log {
+	for _, l := range sink.Log() {
 		if strings.HasPrefix(l.Message, "Forwarding file: ") {
 			forwardCount++
 		}
@@ -196,4 +198,43 @@ func testConfig() *Config {
 			},
 		},
 	}
+}
+
+// Adapted from https://raw.githubusercontent.com/juju/loggo/master/testwriter.go
+
+// testWriter is a useful Writer for testing purposes. Each component of the
+// logging message is stored in the Log array.
+type testWriter struct {
+	mu  sync.Mutex
+	log []loggo.TestLogValues
+}
+
+// Write saves the params as members in the TestLogValues struct appended to the Log array.
+func (writer *testWriter) Write(level loggo.Level, module, filename string, line int, timestamp time.Time, message string) {
+	writer.mu.Lock()
+	defer writer.mu.Unlock()
+
+	if writer.log == nil {
+		writer.log = []loggo.TestLogValues{}
+	}
+	writer.log = append(writer.log, loggo.TestLogValues{level, module, path.Base(filename), line, timestamp, message})
+}
+
+// Log returns a copy of the current logged values.
+func (writer *testWriter) Log() []loggo.TestLogValues {
+	writer.mu.Lock()
+	defer writer.mu.Unlock()
+
+	v := make([]loggo.TestLogValues, len(writer.log))
+	copy(v, writer.log)
+
+	return v
+}
+
+// Clear removes any saved log messages.
+func (writer *testWriter) Clear() {
+	writer.mu.Lock()
+	defer writer.mu.Unlock()
+
+	writer.log = []loggo.TestLogValues{}
 }
