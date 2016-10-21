@@ -6,9 +6,12 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/howbazaar/loggo"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/stretchr/testify/assert"
 )
@@ -80,6 +83,52 @@ func TestNewFileSeek(t *testing.T) {
 
 		// NewFileCheckInterval = 1 second, so wait 1100ms for messages
 		assert.Equal(msg, readPacket(1100*time.Millisecond).Message)
+	}
+}
+
+func TestGlobCollisions(t *testing.T) {
+	assert := assert.New(t)
+
+	// Add many colliding globs
+	config := testConfig()
+	config.Files = append(config.Files, LogFile{
+		Path: "tmp/*.log",
+	})
+	config.LogLevels = "<root>=TRACE"
+
+	// Setup a test logger so we can observe the server's behavior
+	_, _, err := loggo.RemoveWriter("default")
+	assert.NoError(err)
+	sink := new(loggo.TestWriter)
+	loggo.RegisterWriter("default", sink, loggo.TRACE)
+
+	s := NewServer(config)
+	go s.Start()
+	defer s.Close()
+
+	// just a quick rest to get the server started
+	time.Sleep(1 * time.Second)
+
+	var files []*os.File
+	for i := 0; i < 50; i++ {
+		file := tmpLogFile()
+		files = append(files, file)
+		writeLog(file, "the most important message"+strconv.Itoa(i))
+	}
+
+	// NewFileCheckInterval = 1 second, so wait 1100ms for messages
+	time.Sleep(3000 * time.Millisecond)
+
+	var forwardCount int
+	for _, l := range sink.Log {
+		if strings.HasPrefix(l.Message, "Forwarding file: ") {
+			forwardCount++
+		}
+	}
+	assert.Equal(forwardCount, len(files), "Expected %d forwards (one per file), got %d", len(files), forwardCount)
+
+	for _, file := range files {
+		file.Close()
 	}
 }
 

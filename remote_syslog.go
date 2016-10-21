@@ -99,7 +99,6 @@ func (s *Server) closing() bool {
 // Tails a single file
 func (s *Server) tailOne(file, tag string, whence int) {
 	defer s.registry.Remove(file)
-	s.registry.Add(file)
 
 	t, err := tail.TailFile(file, tail.Config{
 		ReOpen:    true,
@@ -123,6 +122,9 @@ func (s *Server) tailOne(file, tag string, whence int) {
 		case line := <-t.Lines:
 			if s.closing() {
 				return
+			}
+			if line == nil {
+				continue
 			}
 
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
@@ -196,6 +198,7 @@ func (s *Server) globFiles(firstPass bool) {
 					whence = io.SeekEnd
 				}
 
+				s.registry.Add(file)
 				go s.tailOne(file, tag, whence)
 			}
 		}
