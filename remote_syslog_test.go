@@ -91,14 +91,18 @@ func TestNewFileSeek(t *testing.T) {
 func TestGlobCollisions(t *testing.T) {
 	assert := assert.New(t)
 
-	// Add many colliding globs
+	// Make sure we're running on a clean directory
+	os.RemoveAll(tmpdir)
+	os.Mkdir(tmpdir, 0755)
+
+	// Add colliding globs
 	config := testConfig()
 	config.Files = append(config.Files, LogFile{
 		Path: "tmp/*.log",
 	})
-	config.LogLevels = "<root>=TRACE"
 
 	// Setup a test logger so we can observe the server's behavior
+	config.LogLevels = "<root>=TRACE"
 	_, _, err := loggo.RemoveWriter("default")
 	assert.NoError(err)
 	sink := new(testWriter)
