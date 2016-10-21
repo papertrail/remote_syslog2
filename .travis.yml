@@ -7,7 +7,7 @@ before_install:
   - go get github.com/mitchellh/gox
   - gem install fpm
   - sudo apt-get -qq update
-  - sudo apt-get install -y rpm-build
+  - sudo apt-get install -y rpmbuild
 
 install:
   - export PATH=$HOME/gopath/bin:$PATH
