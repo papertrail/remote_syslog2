@@ -88,10 +88,10 @@ endif
 	  exit 1; \
 	}
 
-	type rpmbuild >/dev/null 2>&1 || { \
-	  echo "\033[1;33mrpmbuild is not installed. See the package for your distribution\033[m"; \
-	  exit 1; \
-	}
+	# type rpmbuild >/dev/null 2>&1 || { \
+	#   echo "\033[1;33mrpmbuild is not installed. See the package for your distribution\033[m"; \
+	#   exit 1; \
+	# }
 
 
 $(BUILD_PAIRS): build

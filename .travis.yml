@@ -6,8 +6,6 @@ before_install:
   - go get github.com/kardianos/govendor
   - go get github.com/mitchellh/gox
   - gem install fpm
-  - sudo apt-get -qq update
-  - sudo apt-get install -y rpmbuild
 
 install:
   - export PATH=$HOME/gopath/bin:$PATH
@@ -15,6 +13,7 @@ install:
 
 script:
   - make test
+  - PACKAGE_VERSION=test make build
 
 # This assumes that git tags start with "v", e.g. v0.19
 before_deploy:
