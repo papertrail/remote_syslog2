@@ -5,7 +5,7 @@ go:
 before_install:
   - go get github.com/kardianos/govendor
   - go get github.com/mitchellh/gox
-  - sudo gem install fpm
+  - gem install fpm
   - sudo apt-get -qq update
   - sudo apt-get install -y rpm-build
 
