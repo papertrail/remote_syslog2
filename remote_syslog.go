@@ -123,9 +123,6 @@ func (s *Server) tailOne(file, tag string, whence int) {
 			if s.closing() {
 				return
 			}
-			if line == nil {
-				continue
-			}
 
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
 				s.logger.Write(syslog.Packet{
