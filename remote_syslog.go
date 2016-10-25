@@ -26,7 +26,7 @@ var (
 type Server struct {
 	config   *Config
 	logger   *syslog.Logger
-	registry *WorkerRegistry
+	registry WorkerRegistry
 	stopChan chan struct{}
 	stopped  bool
 	mu       sync.RWMutex
@@ -35,7 +35,7 @@ type Server struct {
 func NewServer(config *Config) *Server {
 	return &Server{
 		config:   config,
-		registry: NewWorkerRegistry(),
+		registry: NewInMemoryRegistry(),
 		stopChan: make(chan struct{}),
 	}
 }

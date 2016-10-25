@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/howbazaar/loggo"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/stretchr/testify/assert"
 )
@@ -101,14 +98,11 @@ func TestGlobCollisions(t *testing.T) {
 		Path: "tmp/*.log",
 	})
 
-	// Setup a test logger so we can observe the server's behavior
-	config.LogLevels = "<root>=TRACE"
-	_, _, err := loggo.RemoveWriter("default")
-	assert.NoError(err)
-	sink := new(testWriter)
-	loggo.RegisterWriter("default", sink, loggo.TRACE)
+	// Use an observable registry
+	testRegistry := &testRegistry{workers: make(map[string]int)}
 
 	s := NewServer(config)
+	s.registry = testRegistry
 	go s.Start()
 	defer s.Close()
 
@@ -125,13 +119,11 @@ func TestGlobCollisions(t *testing.T) {
 	// NewFileCheckInterval = 1 second, so wait 1100ms for messages
 	time.Sleep(3000 * time.Millisecond)
 
-	var forwardCount int
-	for _, l := range sink.Log() {
-		if strings.HasPrefix(l.Message, "Forwarding file: ") {
-			forwardCount++
-		}
+	testRegistry.mu.RLock()
+	for file, forwardCount := range testRegistry.workers {
+		assert.Equal(1, forwardCount, "Expected %s to be added once, got %d", file, forwardCount)
 	}
-	assert.Equal(forwardCount, len(files), "Expected %d forwards (one per file), got %d", len(files), forwardCount)
+	testRegistry.mu.RUnlock()
 
 	for _, file := range files {
 		file.Close()
@@ -204,41 +196,29 @@ func testConfig() *Config {
 	}
 }
 
-// Adapted from https://raw.githubusercontent.com/juju/loggo/master/testwriter.go
-
-// testWriter is a useful Writer for testing purposes. Each component of the
-// logging message is stored in the Log array.
-type testWriter struct {
-	mu  sync.Mutex
-	log []loggo.TestLogValues
+// testRegistry is a WorkerRegistry implementation that keeps track of how many times a file was added
+type testRegistry struct {
+	mu      sync.RWMutex
+	workers map[string]int
 }
 
-// Write saves the params as members in the TestLogValues struct appended to the Log array.
-func (writer *testWriter) Write(level loggo.Level, module, filename string, line int, timestamp time.Time, message string) {
-	writer.mu.Lock()
-	defer writer.mu.Unlock()
-
-	if writer.log == nil {
-		writer.log = []loggo.TestLogValues{}
-	}
-	writer.log = append(writer.log, loggo.TestLogValues{level, module, path.Base(filename), line, timestamp, message})
+func (tr *testRegistry) Exists(worker string) bool {
+	tr.mu.RLock()
+	defer tr.mu.RUnlock()
+	_, ok := tr.workers[worker]
+	return ok
 }
 
-// Log returns a copy of the current logged values.
-func (writer *testWriter) Log() []loggo.TestLogValues {
-	writer.mu.Lock()
-	defer writer.mu.Unlock()
-
-	v := make([]loggo.TestLogValues, len(writer.log))
-	copy(v, writer.log)
-
-	return v
+func (tr *testRegistry) Add(worker string) {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	log.Tracef("Adding %s to worker registry", worker)
+	tr.workers[worker] += 1
 }
 
-// Clear removes any saved log messages.
-func (writer *testWriter) Clear() {
-	writer.mu.Lock()
-	defer writer.mu.Unlock()
-
-	writer.log = []loggo.TestLogValues{}
+func (tr *testRegistry) Remove(worker string) {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	log.Tracef("Removing %s from worker registry", worker)
+	delete(tr.workers, worker)
 }
