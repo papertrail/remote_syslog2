@@ -98,7 +98,7 @@ type Logger struct {
 	connectTimeout   time.Duration
 	writeTimeout     time.Duration
 	tcpMaxLineLength int
-	mu               sync.Mutex
+	mu               sync.RWMutex
 	stopChan         chan struct{}
 	stopped          bool
 }
@@ -127,6 +127,9 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 }
 
 func (l *Logger) Write(packet Packet) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
 	if l.stopped {
 		return
 	}

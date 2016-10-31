@@ -6,6 +6,8 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -83,6 +85,51 @@ func TestNewFileSeek(t *testing.T) {
 	}
 }
 
+func TestGlobCollisions(t *testing.T) {
+	assert := assert.New(t)
+
+	// Make sure we're running on a clean directory
+	os.RemoveAll(tmpdir)
+	os.Mkdir(tmpdir, 0755)
+
+	// Add colliding globs
+	config := testConfig()
+	config.Files = append(config.Files, LogFile{
+		Path: "tmp/*.log",
+	})
+
+	// Use an observable registry
+	testRegistry := &testRegistry{workers: make(map[string]int)}
+
+	s := NewServer(config)
+	s.registry = testRegistry
+	go s.Start()
+	defer s.Close()
+
+	// just a quick rest to get the server started
+	time.Sleep(1 * time.Second)
+
+	var files []*os.File
+	for i := 0; i < 50; i++ {
+		file := tmpLogFile()
+		files = append(files, file)
+		writeLog(file, "the most important message"+strconv.Itoa(i))
+	}
+
+	// NewFileCheckInterval = 1 second, so wait 1100ms for messages
+	time.Sleep(3000 * time.Millisecond)
+
+	testRegistry.mu.RLock()
+	for file, forwardCount := range testRegistry.workers {
+		assert.Equal(1, forwardCount, "Expected %s to be added once, got %d", file, forwardCount)
+	}
+	testRegistry.mu.RUnlock()
+
+	for _, file := range files {
+		file.Close()
+	}
+}
+
 // write to test log file
 func writeLog(file *os.File, msg string) {
 	w := bufio.NewWriterSize(file, 1024*32)
@@ -147,4 +194,31 @@ func testConfig() *Config {
 			},
 		},
 	}
+}
+
+// testRegistry is a WorkerRegistry implementation that keeps track of how many times a file was added
+type testRegistry struct {
+	mu      sync.RWMutex
+	workers map[string]int
+}
+
+func (tr *testRegistry) Exists(worker string) bool {
+	tr.mu.RLock()
+	defer tr.mu.RUnlock()
+	_, ok := tr.workers[worker]
+	return ok
+}
+
+func (tr *testRegistry) Add(worker string) {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	log.Tracef("Adding %s to worker registry", worker)
+	tr.workers[worker] += 1
+}
+
+func (tr *testRegistry) Remove(worker string) {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	log.Tracef("Removing %s from worker registry", worker)
+	delete(tr.workers, worker)
 }
