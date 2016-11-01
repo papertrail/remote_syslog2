@@ -38,7 +38,7 @@ option or the `-d` invocation flag are required.
 
 ## Installing
 
-Precompiled binaries for Mac, Linux and Windows are available on the
+Precompiled binaries for Mac (Darwin), Linux and Windows are available on the
 [remote_syslog2 releases page][releases].
 
 Untar the package, copy the "remote_syslog" executable into your $PATH,
