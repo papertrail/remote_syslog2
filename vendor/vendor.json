@@ -85,12 +85,6 @@
 			"revision": "384be41088235af6d26ba66786fd23c45b2d5311"
 		},
 		{
-			"checksumSHA1": "arojRtqOmOlvVF+Bo4mv05dF/wc=",
-			"comment": "v1.0.0-35-ga30252c",
-			"path": "github.com/hpcloud/tail",
-			"revision": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-		},
-		{
 			"checksumSHA1": "JQP5xDlFbFT+PZT8Yk70J5tchUE=",
 			"comment": "v1.0.0-35-ga30252c",
 			"path": "github.com/hpcloud/tail/ratelimiter",
@@ -136,6 +130,12 @@
 			"checksumSHA1": "JKQ8SPnOodRAk6+QJycVAeYSiSs=",
 			"path": "github.com/nightlyone/lockfile",
 			"revision": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
+		},
+		{
+			"checksumSHA1": "y7NmyaDKZbRaQaJJq2RRofX+a7I=",
+			"path": "github.com/papertrail/tail",
+			"revision": "ba087e590165881c62b642c7e15015d23d79b7cd",
+			"revisionTime": "2016-11-01T16:17:24Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",

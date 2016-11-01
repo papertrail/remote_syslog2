@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/howbazaar/loggo"
-	"github.com/hpcloud/tail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
+	"github.com/papertrail/tail"
 )
 
 var (
