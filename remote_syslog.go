@@ -124,6 +124,11 @@ func (s *Server) tailOne(file, tag string, whence int) {
 				return
 			}
 
+			if line.Err != nil {
+				log.Errorf("Error tailing file: %s", line.Err.Error())
+				continue
+			}
+
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
 				s.logger.Write(syslog.Packet{
 					Severity: s.config.Severity,
