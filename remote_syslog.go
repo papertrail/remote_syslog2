@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/howbazaar/loggo"
-	"github.com/hpcloud/tail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
+	"github.com/papertrail/tail"
 )
 
 var (
@@ -122,6 +122,11 @@ func (s *Server) tailOne(file, tag string, whence int) {
 		case line := <-t.Lines:
 			if s.closing() {
 				return
+			}
+
+			if line.Err != nil {
+				log.Errorf("Error tailing file: %s", line.Err.Error())
+				continue
 			}
 
 			if !matchExps(line.Text, s.config.ExcludePatterns) {
