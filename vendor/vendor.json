@@ -108,9 +108,10 @@
 			"revision": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
 		},
 		{
-			"checksumSHA1": "eB8Jv1gP1xDLtYRGpxvjrOdUPnY=",
-			"path": "github.com/papertrail/ptail/follower",
-			"revision": ""
+			"checksumSHA1": "lzmC5x+0g8P0WwiBY68mlmCaSqc=",
+			"path": "github.com/papertrail/go-tail/follower",
+			"revision": "78f0657870da1622fe4ca1dce85805c7c1f4d455",
+			"revisionTime": "2016-11-05T01:59:04Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",

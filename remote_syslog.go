@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/howbazaar/loggo"
-	"github.com/papertrail/ptail/follower"
+	"github.com/papertrail/go-tail/follower"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
 )
