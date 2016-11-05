@@ -159,7 +159,7 @@ func readPacket(wait time.Duration) syslog.Packet {
 
 	packet, err := syslog.Parse(string(line))
 	if err != nil {
-		panic(string(line))
+		panic(err)
 	}
 
 	return packet
