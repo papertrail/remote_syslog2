@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/howbazaar/loggo"
-	"github.com/hpcloud/tail"
+	"github.com/papertrail/go-tail/follower"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
 )
@@ -100,12 +100,10 @@ func (s *Server) closing() bool {
 func (s *Server) tailOne(file, tag string, whence int) {
 	defer s.registry.Remove(file)
 
-	t, err := tail.TailFile(file, tail.Config{
-		ReOpen:    true,
-		Follow:    true,
-		MustExist: true,
-		Poll:      s.config.Poll,
-		Location:  &tail.SeekInfo{0, whence},
+	t, err := follower.New(file, follower.Config{
+		Reopen: true,
+		Offset: 0,
+		Whence: whence,
 	})
 
 	if err != nil {
@@ -119,33 +117,36 @@ func (s *Server) tailOne(file, tag string, whence int) {
 
 	for {
 		select {
-		case line := <-t.Lines:
+		case line := <-t.Lines():
 			if s.closing() {
+				t.Close()
 				return
 			}
 
-			if !matchExps(line.Text, s.config.ExcludePatterns) {
+			l := line.String()
+
+			if !matchExps(l, s.config.ExcludePatterns) {
+
 				s.logger.Write(syslog.Packet{
 					Severity: s.config.Severity,
 					Facility: s.config.Facility,
 					Time:     time.Now(),
 					Hostname: s.logger.ClientHostname,
 					Tag:      tag,
-					Message:  line.Text,
+					Message:  l,
 				})
 
-				log.Tracef("Forwarding line: %s", line.Text)
+				log.Tracef("Forwarding line: %s", l)
 
 			} else {
-				log.Tracef("Not Forwarding line: %s", line.Text)
+				log.Tracef("Not Forwarding line: %s", l)
 			}
 
 		case <-s.stopChan:
+			t.Close()
 			return
 		}
 	}
-
-	return
 }
 
 // Tails files speficied in the globs and re-evaluates the globs
