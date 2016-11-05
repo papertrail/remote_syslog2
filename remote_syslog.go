@@ -119,6 +119,7 @@ func (s *Server) tailOne(file, tag string, whence int) {
 		select {
 		case line := <-t.Lines():
 			if s.closing() {
+				t.Close()
 				return
 			}
 
@@ -142,11 +143,10 @@ func (s *Server) tailOne(file, tag string, whence int) {
 			}
 
 		case <-s.stopChan:
+			t.Close()
 			return
 		}
 	}
-
-	return
 }
 
 // Tails files speficied in the globs and re-evaluates the globs
