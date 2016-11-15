@@ -108,10 +108,16 @@
 			"revision": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
 		},
 		{
-			"checksumSHA1": "lzmC5x+0g8P0WwiBY68mlmCaSqc=",
+			"checksumSHA1": "2aD8Ll16aJCh32lm09ow88q0BO4=",
+			"path": "github.com/papertrail/go-tail",
+			"revision": "c08f359f0f47b6a0a603b526a012fcc8924a65b0",
+			"revisionTime": "2016-11-15T00:28:15Z"
+		},
+		{
+			"checksumSHA1": "bxKDUFzzl81g5apnjRKVr5e0Cw4=",
 			"path": "github.com/papertrail/go-tail/follower",
-			"revision": "78f0657870da1622fe4ca1dce85805c7c1f4d455",
-			"revisionTime": "2016-11-05T01:59:04Z"
+			"revision": "c08f359f0f47b6a0a603b526a012fcc8924a65b0",
+			"revisionTime": "2016-11-15T00:28:15Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
