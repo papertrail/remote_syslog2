@@ -41,7 +41,6 @@ type Follower struct {
 	err      error
 	config   Config
 	reader   *bufio.Reader
-	dangle   int
 	closeCh  chan struct{}
 }
 
@@ -115,14 +114,16 @@ func (t *Follower) follow() error {
 			if err == io.EOF {
 				l := len(s)
 
-				t.file.Seek(-int64(l), io.SeekCurrent)
+				_, err := t.file.Seek(-int64(l), io.SeekCurrent)
+				if err != nil {
+					return err
+				}
+
 				t.reader.Reset(t.file)
-				t.dangle += l
 
 				break
 			}
 
-			t.dangle = 0
 			t.sendLine(s)
 		}
 
@@ -133,6 +134,16 @@ func (t *Follower) follow() error {
 
 			// as soon as something is written, go back and read until EOF
 			case fsnotify.Write:
+				continue
+
+			// truncated. seek to the end minus any dangling bytes before linebreak
+			case fsnotify.Chmod:
+				_, err = t.file.Seek(0, io.SeekStart)
+				if err != nil {
+					return err
+				}
+
+				t.reader.Reset(t.file)
 				continue
 
 			// if a file is removed or renamed
@@ -149,14 +160,6 @@ func (t *Follower) follow() error {
 
 				if err := t.reopen(); err != nil {
 					return err
-				}
-
-				// if we received a CHMOD and have reopened the file,
-				// seek to the end minus any dangling bytes before linebreak
-				if evt.Op == fsnotify.Chmod {
-					if _, err := t.file.Seek(-int64(t.dangle), io.SeekEnd); err != nil {
-						return err
-					}
 				}
 
 				watcher.Add(t.filename)
