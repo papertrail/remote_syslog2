@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -16,31 +18,24 @@ import (
 )
 
 const (
-	tmpdir     = "./tmp"
-	listenHost = "localhost"
-	listenPort = 8999
+	tmpdir = "./tmp"
 )
 
 var (
-	listener *net.UDPConn
+	server *testSyslogServer
 )
-
-func init() {
-	resAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", listenHost, listenPort))
-	if err != nil {
-		panic(err)
-	}
-
-	listener, err = net.ListenUDP("udp", resAddr)
-	if err != nil {
-		panic(err)
-	}
-}
 
 // main testing function to clean up after running
 func TestMain(m *testing.M) {
 	os.Mkdir(tmpdir, 0755)
+
+	server = newTestSyslogServer("127.0.0.1:0")
+	go server.serve()
+
 	rs := m.Run()
+
+	server.closeCh <- struct{}{}
+
 	os.RemoveAll(tmpdir)
 	os.Exit(rs)
 }
@@ -80,8 +75,8 @@ func TestNewFileSeek(t *testing.T) {
 
 		writeLog(file, msg)
 
-		// NewFileCheckInterval = 1 second, so wait 1100ms for messages
-		assert.Equal(msg, readPacket(1100*time.Millisecond).Message)
+		packet := <-server.packets
+		assert.Equal(msg, packet.Message)
 	}
 }
 
@@ -151,23 +146,10 @@ func tmpLogFile() *os.File {
 	return file
 }
 
-func readPacket(wait time.Duration) syslog.Packet {
-	listener.SetReadDeadline(time.Now().Add(wait))
-
-	reader := bufio.NewReaderSize(listener, 1024*32)
-	line, _, _ := reader.ReadLine()
-
-	packet, err := syslog.Parse(string(line))
-	if err != nil {
-		panic(err)
-	}
-
-	return packet
-}
-
 func testConfig() *Config {
 	severity, _ := syslog.Severity("info")
 	facility, _ := syslog.Facility("user")
+	addr := server.addr()
 
 	return &Config{
 		ConnectTimeout:       10 * time.Second,
@@ -184,15 +166,103 @@ func testConfig() *Config {
 			Port     int
 			Protocol string
 		}{
-			Host:     listenHost,
-			Port:     listenPort,
-			Protocol: "udp",
+			Host:     addr.host,
+			Port:     addr.port,
+			Protocol: "tcp",
 		},
 		Files: []LogFile{
 			{
 				Path: "tmp/*.log",
 			},
 		},
+	}
+}
+
+type testSyslogServer struct {
+	listener net.Listener
+	closeCh  chan struct{}
+	packets  chan syslog.Packet
+}
+
+type testAddr struct {
+	host string
+	port int
+}
+
+// testSyslogServer is a type for testing sent syslog messages
+func newTestSyslogServer(addr string) *testSyslogServer {
+	var (
+		err error
+		s   = &testSyslogServer{
+			closeCh: make(chan struct{}),
+			packets: make(chan syslog.Packet),
+		}
+	)
+
+	s.listener, err = net.Listen("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+
+	return s
+}
+
+func (s *testSyslogServer) addr() testAddr {
+	addr := s.listener.Addr()
+	addrParts := strings.Split(addr.String(), ":")
+	if len(addrParts) != 2 {
+		panic(fmt.Sprintf("invalid listener address: %s", addr.String()))
+	}
+
+	port, err := strconv.Atoi(addrParts[1])
+	if err != nil {
+		panic(err)
+	}
+
+	return testAddr{
+		host: addrParts[0],
+		port: port,
+	}
+}
+
+func (s *testSyslogServer) serve() {
+	for {
+		select {
+		case <-s.closeCh:
+			return
+
+		default:
+			conn, err := s.listener.Accept()
+			if err != nil {
+				panic(err)
+			}
+
+			reader := bufio.NewReader(conn)
+			for {
+				select {
+				case <-s.closeCh:
+					return
+
+				default:
+					line, err := reader.ReadString('\n')
+					if err != nil && err != io.EOF {
+						panic(err)
+					}
+
+					if err == io.EOF {
+						time.Sleep(100 * time.Millisecond)
+						continue
+					}
+
+					packet, err := syslog.Parse(strings.TrimRight(line, "\n"))
+					if err != nil {
+						panic(err)
+					}
+
+					s.packets <- packet
+				}
+			}
+		}
 	}
 }
 
