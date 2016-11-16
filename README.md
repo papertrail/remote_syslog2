@@ -199,7 +199,7 @@ concern as to which method is used. If a log file is moved or renamed,
 and a new file is created (at a new inode), `remote_syslog` will follow that
 new file at the new inode (assuming it has the same absolute path name). If
 a file is copied then truncated, `remote_syslog` will seek to the beginning of
-the truncated file continue to read it.
+the truncated file and continue to read it.
 
 #### Log rotation edge cases to be aware of
 
