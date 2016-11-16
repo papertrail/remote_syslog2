@@ -117,10 +117,22 @@ func (s *Server) tailOne(file, tag string, whence int) {
 
 	for {
 		select {
-		case line := <-t.Lines():
+		case line, ok := <-t.Lines():
+			if !ok {
+				if t.Err() != nil {
+					log.Errorf("%s", t.Err())
+				}
+
+				return
+			}
+
 			if s.closing() {
 				t.Close()
 				return
+			}
+
+			if d := line.Discarded(); d > 0 {
+				log.Infof("Discarded %d NULL bytes", d)
 			}
 
 			l := line.String()
