@@ -2,6 +2,7 @@ package follower
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -11,12 +12,18 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+const (
+	bufSize  = 4 * 1024
+	peekSize = 1024
+)
+
 var (
 	_ = fmt.Print
 )
 
 type Line struct {
-	bytes []byte
+	bytes     []byte
+	discarded int
 }
 
 func (l *Line) Bytes() []byte {
@@ -25,6 +32,10 @@ func (l *Line) Bytes() []byte {
 
 func (l *Line) String() string {
 	return string(l.bytes)
+}
+
+func (l *Line) Discarded() int {
+	return l.discarded
 }
 
 type Config struct {
@@ -41,6 +52,8 @@ type Follower struct {
 	err      error
 	config   Config
 	reader   *bufio.Reader
+	watcher  *fsnotify.Watcher
+	offset   int64
 	closeCh  chan struct{}
 }
 
@@ -88,18 +101,35 @@ func (t *Follower) follow() error {
 		errChan   = make(chan error)
 	)
 
-	watcher, err := fsnotify.NewWatcher()
+	t.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
 
-	defer watcher.Close()
-	go watchFileEvents(watcher, eventChan, errChan)
+	defer t.watcher.Close()
+	go t.watchFileEvents(eventChan, errChan)
 
-	watcher.Add(t.filename)
+	t.watcher.Add(t.filename)
 
 	for {
 		for {
+			// discard leading NUL bytes
+			var discarded int
+
+			for {
+				b, _ := t.reader.Peek(peekSize)
+				i := bytes.LastIndexByte(b, '\x00')
+
+				if i > 0 {
+					n, _ := t.reader.Discard(i + 1)
+					discarded += n
+				}
+
+				if i+1 < peekSize {
+					break
+				}
+			}
+
 			s, err := t.reader.ReadBytes('\n')
 			if err != nil && err != io.EOF {
 				return err
@@ -114,17 +144,16 @@ func (t *Follower) follow() error {
 			if err == io.EOF {
 				l := len(s)
 
-				_, err := t.file.Seek(-int64(l), io.SeekCurrent)
+				t.offset, err = t.file.Seek(-int64(l), io.SeekCurrent)
 				if err != nil {
 					return err
 				}
 
 				t.reader.Reset(t.file)
-
 				break
 			}
 
-			t.sendLine(s)
+			t.sendLine(s, discarded)
 		}
 
 		// we're now at EOF, so wait for changes
@@ -132,18 +161,36 @@ func (t *Follower) follow() error {
 		case evt := <-eventChan:
 			switch evt.Op {
 
-			// as soon as something is written, go back and read until EOF
-			case fsnotify.Write:
-				continue
-
-			// truncated. seek to the end minus any dangling bytes before linebreak
+			// as soon as something is written, go back and read until EOF.
 			case fsnotify.Chmod:
-				_, err = t.file.Seek(0, io.SeekStart)
+				fallthrough
+
+			case fsnotify.Write:
+				fi, err := t.file.Stat()
 				if err != nil {
-					return err
+					if !os.IsNotExist(err) {
+						return err
+					}
+
+					// it's possible that an unlink can cause fsnotify.Chmod,
+					// so attempt to rewatch if the file is missing
+					if err := t.rewatch(); err != nil {
+						return err
+					}
+
+					continue
 				}
 
-				t.reader.Reset(t.file)
+				// file was truncated, seek to the beginning
+				if t.offset > fi.Size() {
+					t.offset, err = t.file.Seek(0, io.SeekStart)
+					if err != nil {
+						return err
+					}
+
+					t.reader.Reset(t.file)
+				}
+
 				continue
 
 			// if a file is removed or renamed
@@ -155,14 +202,10 @@ func (t *Follower) follow() error {
 					return nil
 				}
 
-				watcher.Remove(t.filename)
-				time.Sleep(1 * time.Second)
-
-				if err := t.reopen(); err != nil {
+				if err := t.rewatch(); err != nil {
 					return err
 				}
 
-				watcher.Add(t.filename)
 				continue
 			}
 
@@ -172,7 +215,7 @@ func (t *Follower) follow() error {
 
 		// a request to stop
 		case <-t.closeCh:
-			watcher.Remove(t.filename)
+			t.watcher.Remove(t.filename)
 			return nil
 
 		// fall back to 10 second polling if we haven't received any fsevents
@@ -188,16 +231,24 @@ func (t *Follower) follow() error {
 				return err
 			}
 
-			watcher.Remove(t.filename)
-			if err := t.reopen(); err != nil {
+			if err := t.rewatch(); err != nil {
 				return err
 			}
 
-			watcher.Add(t.filename)
 			continue
 		}
 	}
 
+	return nil
+}
+
+func (t *Follower) rewatch() error {
+	t.watcher.Remove(t.filename)
+	if err := t.reopen(); err != nil {
+		return err
+	}
+
+	t.watcher.Add(t.filename)
 	return nil
 }
 
@@ -213,7 +264,7 @@ func (t *Follower) reopen() error {
 	}
 
 	t.file = file
-	t.reader = bufio.NewReader(t.file)
+	t.reader = bufio.NewReaderSize(t.file, bufSize)
 
 	return nil
 }
@@ -228,14 +279,17 @@ func (t *Follower) close(err error) {
 	close(t.lines)
 }
 
-func (t *Follower) sendLine(l []byte) {
-	t.lines <- Line{l[:len(l)-1]}
+func (t *Follower) sendLine(l []byte, d int) {
+	t.lines <- Line{l[:len(l)-1], d}
 }
 
-func watchFileEvents(watcher *fsnotify.Watcher, eventChan chan fsnotify.Event, errChan chan error) {
+func (t *Follower) watchFileEvents(eventChan chan fsnotify.Event, errChan chan error) {
+	defer close(eventChan)
+	defer close(errChan)
+
 	for {
 		select {
-		case evt, ok := <-watcher.Events:
+		case evt, ok := <-t.watcher.Events:
 			if !ok {
 				return
 			}
@@ -253,7 +307,7 @@ func watchFileEvents(watcher *fsnotify.Watcher, eventChan chan fsnotify.Event, e
 			}
 
 		// die on a file watching error
-		case err, _ := <-watcher.Errors:
+		case err, _ := <-t.watcher.Errors:
 			errChan <- err
 			return
 		}

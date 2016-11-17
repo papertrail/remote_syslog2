@@ -186,7 +186,7 @@ than the current set of matches). This is not necessary for globs defined in
 the config file.
 
 
-### Log rotation
+### Log rotation and the behavior of remote_syslog
 
 External log rotation scripts often move or remove an existing log file
 and replace it with a new one (at a new inode). The Linux standard script
@@ -194,11 +194,21 @@ and replace it with a new one (at a new inode). The Linux standard script
 option.  With that option, `logrotate` will copy files, operate on the copies,
 and truncate the original so that the inode remains the same.
 
-This comes closest to ensuring that programs watching these files (including
-`remote_syslog`) will not be affected by, or need to be notified of, the
-rotation. The only tradeoff of `copytruncate` is slightly higher disk usage
-during rotation, so we recommend this option whether or not you use
-`remote_syslog`.
+`remote_syslog` will handle both approaches seamlessly, so it should be no
+concern as to which method is used. If a log file is moved or renamed, 
+and a new file is created (at a new inode), `remote_syslog` will follow that
+new file at the new inode (assuming it has the same absolute path name). If
+a file is copied then truncated, `remote_syslog` will seek to the beginning of
+the truncated file and continue to read it.
+
+#### Log rotation edge cases to be aware of
+
+Some logging programs such as Java's gclog (`-XX:+PrintGC` or `-verbose:gc`)
+do not log in append mode, so if another program such as `logrotate` (set to
+`copytruncate`) truncates the file, on the next write of the Java logger, the
+OS will fill the file with NUL bytes upto the current offset of the file descriptor.
+More info on that [here](http://stackoverflow.com/questions/8353401/garbage-collector-log-loggc-file-rotation-with-logrotate-does-not-work-properl).
+`remote_syslog` will detect those leading NUL bytes, discard them, and log the discard count.
 
 
 ### Excluding files from being sent
