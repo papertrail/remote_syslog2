@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"os"
@@ -18,10 +17,7 @@ import (
 	"github.com/papertrail/remote_syslog2/utils"
 )
 
-var (
-	log = loggo.GetLogger("")
-	_   = fmt.Printf
-)
+var log = loggo.GetLogger("")
 
 type Server struct {
 	config   *Config
