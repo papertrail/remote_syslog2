@@ -287,7 +287,7 @@ root logger to the `DEBUG` level and output to `logfile.txt`.
 ### Truncated messages
 
 To send messages longer than 1024 characters, use TCP (either TLS or cleartext
-TCP) of UDP. See "[Sending messages securely](#sending-messages-securely)" to
+TCP) instead of UDP. See "[Sending messages securely](#sending-messages-securely)" to
 use TCP with TLS for messages of any length.
 
 [Here's why](http://help.papertrailapp.com/kb/configuration/troubleshooting-remote-syslog-reachability/#message-length) longer UDP messages are impossible to send over
