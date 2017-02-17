@@ -222,13 +222,18 @@ func (t *Follower) follow() error {
 		// stat the file, if it's still there, just continue and try to read bytes
 		// if not, go through our re-opening routine
 		case <-time.After(10 * time.Second):
-			_, err := t.file.Stat()
-			if err == nil {
-				continue
+			fi1, err := t.file.Stat()
+			if err != nil && !os.IsNotExist(err) {
+				return err
 			}
 
-			if !os.IsNotExist(err) {
+			fi2, err := os.Stat(t.filename)
+			if err != nil && !os.IsNotExist(err) {
 				return err
+			}
+
+			if os.SameFile(fi1, fi2) {
+				continue
 			}
 
 			if err := t.rewatch(); err != nil {
