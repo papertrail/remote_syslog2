@@ -5,7 +5,8 @@ files:
   - /opt/misc/*.log
   - /home/**/*.log
   - /var/log/mysqld.log
-  - /var/run/mysqld/mysqld-slow.log
+  - path: /var/run/mysqld/mysqld-slow.log
+    tag: slow_queries.log
 exclude_files:
   - old
   - 200\d
