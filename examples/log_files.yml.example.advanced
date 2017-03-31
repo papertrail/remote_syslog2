@@ -2,6 +2,10 @@
 files: 
   - /var/log/httpd/access_log
   - /var/log/httpd/error_log
+  - path: /var/log/httpd/site2/access_log
+    tag: site2/access_log
+  - path: /var/log/httpd/site2/error_log
+    tag: site2/error_log
   - /opt/misc/*.log
   - /home/**/*.log
   - /var/log/mysqld.log
