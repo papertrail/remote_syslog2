@@ -295,8 +295,15 @@ the Internet.
 
 ### inotify
 
-When running remote_syslog in the foreground using the `-D` switch, if you
-receive the error:
+The number of log files that remote_syslog can open at once is governed by 
+a combination of system ulimits and inotify values.
+
+If you're watching a lot of files and start seeing failures, check the 
+per-process file handle limit using `ulimit -n` and increase it if necessary 
+(using `/etc/security/limits.conf` or environment equivalent).
+
+Additonally, when running remote_syslog in the foreground using the `-D` 
+switch, if you receive the error:
 
     Error creating fsnotify watcher: inotify_init: too many open files
 
