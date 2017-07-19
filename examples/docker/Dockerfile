@@ -16,7 +16,6 @@ RUN apk update \
 
 ##build arg used to pull desired versions - docker cli 
 RUN wget https://github.com/papertrail/remote_syslog2/releases/download/$VERSION/remote_syslog_linux_amd64.tar.gz
-
 RUN tar -xvf remote_syslog_linux_amd64.tar.gz
 
 #package/tarball path changes will break dockerfile at this point
