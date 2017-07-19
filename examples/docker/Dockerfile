@@ -19,6 +19,10 @@ RUN wget https://github.com/papertrail/remote_syslog2/releases/download/$VERSION
 
 RUN tar -xvf remote_syslog_linux_amd64.tar.gz
 
+RUN mv remote_syslog/remote_syslog /usr/local/bin/remote_syslog
+
+RUN chown rs2:rs2 /usr/local/bin/remote_syslog
+
 USER rs2
 
 ## uncomment to debug container (using docker cli)
