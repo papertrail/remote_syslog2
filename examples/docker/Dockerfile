@@ -19,12 +19,16 @@ RUN wget https://github.com/papertrail/remote_syslog2/releases/download/$VERSION
 
 RUN tar -xvf remote_syslog_linux_amd64.tar.gz
 
+#package path changes will break dockerfile at this point
 RUN mv remote_syslog/remote_syslog /usr/local/bin/remote_syslog
+RUN mv /remote_syslog/example_config.yml /etc/log_files.yml
 
 RUN chown rs2:rs2 /usr/local/bin/remote_syslog
 
 USER rs2
 
-## uncomment to debug container (using docker cli)
+CMD ["remote_syslog", "-D" ]
+
+## uncomment to debug container
 #RUN touch /tmp/foo
 #CMD ["/usr/bin/tail", "-f", "/tmp/foo"]
