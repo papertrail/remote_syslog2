@@ -283,13 +283,22 @@ Placing remote_syslog2 inside of a base centos/ubuntu/debian would result in a l
 Install docker on your host, typically via a package manager,
 be warned you may have stale packages on your system, check docker's latest documentation to insure you install the right package. (https://docs.docker.com/search/?q=install).
 
+### Build and Run (with docker cli):
 
+    # same directory as Dockerfile
+    # change version based on packages available on release page
+    docker build --build-arg VERSION=v0.19 -t rs2  .
 
+A successful build message should be produced after the build command.
+`docker images` will reveal image size and name.
 
-### Build and Run:
+run (in background, _docker ps_ to confirm)
+    docker run --name rs2 -d rs2`
 
-    docker build --build-arg VERSION=v0.19  -t rs2  .
+If docker ps returns an empty table check the docker container's stdout
+    docker logs rs2
 
+This will produce errors from the container's daemonized process (remote_syslog2) which should be a decent hint as to why it crashed.
 
 ## Troubleshooting
 
