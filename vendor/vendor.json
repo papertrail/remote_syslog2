@@ -108,10 +108,10 @@
 			"revision": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
 		},
 		{
-			"checksumSHA1": "rWc9yrqpLqyvgeyOxQhO0sDPT98=",
+			"checksumSHA1": "yVIJdaWkoUJbEhvujesED4rqAnE=",
 			"path": "github.com/papertrail/go-tail/follower",
-			"revision": "e2752ede6edd8ce2a834603866f118eed9da0d4b",
-			"revisionTime": "2017-02-10T22:15:38Z"
+			"revision": "1b77c8dfcc6baca12dedfab119135396782b68a1",
+			"revisionTime": "2017-08-01T20:12:34Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
