@@ -22,6 +22,10 @@ RUN tar -xvf remote_syslog_linux_amd64.tar.gz
 RUN mv remote_syslog/remote_syslog /usr/local/bin/remote_syslog
 RUN mv /remote_syslog/example_config.yml /etc/log_files.yml
 
+#Define the files/directory for host mounting
+#directory under "/var/log/"
+VOLUME ["/locallog.txt"]
+
 RUN chown rs2:rs2 /usr/local/bin/remote_syslog
 USER rs2
 CMD ["remote_syslog", "-D" ]
