@@ -3,12 +3,11 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/VividCortex/godaemon"
 	"github.com/nightlyone/lockfile"
 )
 
@@ -25,33 +24,26 @@ func ResolvePath(path string) string {
 
 func Daemonize(logFilePath, pidFilePath string) {
 
-	if os.Getenv("__DAEMON_CWD") == "" {
+	if !isDaemonized() {
 		cwd, err := os.Getwd()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Cannot determine working directory: %v", err)
 			os.Exit(1)
 		}
 		os.Setenv("__DAEMON_CWD", cwd)
-	}
 
-	logFile, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not open local log file: %v", err)
-		os.Exit(1)
-	}
+		logFile, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Could not open local log file: %v", err)
+			os.Exit(1)
+		}
 
-	stdout, stderr, err := godaemon.MakeDaemon(&godaemon.DaemonAttr{CaptureOutput: true})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not Daemonize: %v", err)
-		os.Exit(1)
+		err = daemonize([]*os.File{nil, logFile, logFile})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Could not Daemonize: %v", err)
+			os.Exit(1)
+		}
 	}
-
-	go func() {
-		io.Copy(logFile, stdout)
-	}()
-	go func() {
-		io.Copy(logFile, stderr)
-	}()
 
 	lock, err := lockfile.New(pidFilePath)
 	err = lock.TryLock()
@@ -60,4 +52,99 @@ func Daemonize(logFilePath, pidFilePath string) {
 		os.Exit(1)
 	}
 
+}
+
+func daemonize(files []*os.File) error {
+	err := daemonChild('1', files)
+	if err != nil {
+		return err
+	}
+	os.Exit(0)
+	panic("os.Exit returned")
+}
+
+func isDaemonized() bool {
+	switch os.Getenv("__DAEMON_STEP") {
+	default:
+		return false
+	case "1":
+		err := daemonChild('2', nil)
+		if err != nil {
+			os.Exit(1)
+			panic("os.Exit returned")
+		}
+		os.Exit(0)
+		panic("os.Exit returned")
+	case "2":
+		os.Unsetenv("__DAEMON_STEP")
+	}
+
+	return true
+}
+
+func daemonChild(step rune, files []*os.File) error {
+	if os.Getuid() != os.Geteuid() || os.Getgid() != os.Getegid() {
+		// Can't rely on os.Executable being safe to execute, and the
+		// fallback to os.Args[0] certainly wouldn't be safe.
+		return errors.New("unsafe to daemonize suid/sgid executables")
+	}
+
+	name, err := os.Executable()
+	if err != nil {
+		name = os.Args[0]
+	}
+
+	attr := os.ProcAttr{}
+
+	if step == '2' {
+		attr.Dir = string(os.PathSeparator)
+	}
+
+	if step == '1' {
+		devNull, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
+		if err != nil {
+			return err
+		}
+		defer devNull.Close()
+		attr.Files = []*os.File{devNull, devNull, devNull}
+	} else {
+		attr.Files = []*os.File{os.Stdin, os.Stdout, os.Stderr}
+	}
+
+	if len(files) > len(attr.Files) {
+		temp := make([]*os.File, len(files))
+		copy(temp, attr.Files)
+		attr.Files = temp
+	}
+	for i := range files {
+		if files[i] != nil {
+			attr.Files[i] = files[i]
+		}
+	}
+
+	if step == '1' {
+		attr.Sys = setsidAttr()
+	}
+
+	err = os.Setenv("__DAEMON_STEP", string(step))
+	if err != nil {
+		return err
+	}
+	defer os.Unsetenv("__DAEMON_STEP")
+
+	process, err := os.StartProcess(name, os.Args, &attr)
+	if err != nil {
+		return err
+	}
+
+	if step == '1' {
+		_, err = process.Wait()
+		if err != nil {
+			return err
+		}
+	} else {
+		process.Release()
+	}
+
+	return nil
 }
