@@ -2,10 +2,6 @@
 files: 
   - /var/log/httpd/access_log
   - /var/log/httpd/error_log
-  - path: /var/log/httpd/site2/access_log
-    tag: site2/access_log
-  - path: /var/log/httpd/site2/error_log
-    tag: site2/error_log
   - /opt/misc/*.log
   - /home/**/*.log
   - /var/log/mysqld.log
@@ -21,6 +17,4 @@ destination:
   host: HOST.papertrailapp.com # NOTE: change this to YOUR papertrail host!
   port: 12345   # NOTE: change this to YOUR papertrail port!
   protocol: tls
-facility: local7
-severity: warn
 new_file_check_interval: "10" # Check every 10 seconds

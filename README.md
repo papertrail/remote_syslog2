@@ -63,7 +63,7 @@ Configuration directives can also be specified as command-line arguments (below)
       -p, --dest-port int                 Destination syslog port (default 514)
           --eventmachine-tail             No action, provided for backwards compatibility
       -f, --facility string               Facility (default "user")
-          --hostname string               Local hostname to send from (default: OS hostname)
+          --hostname string               Local hostname to send from (default "mmartin-mb")
           --log string                    Set loggo config, like: --log="<root>=DEBUG" (default "<root>=INFO")
           --new-file-check-interval int   How often to check for new files (seconds) (default 10)
       -D, --no-detach                     Don't daemonize and detach from the terminal; overrides --debug-log-cfg

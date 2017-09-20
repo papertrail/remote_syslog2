@@ -27,3 +27,8 @@ This is a systemd service configuration file.  Place this file at `/etc/systemd/
 ## remote_syslog.upstart.conf
 
 This is an upstart configuration file.  Place this file at `/etc/init/remote_syslog.conf` and then run `sudo start remote_syslog` to start the service.
+
+## docker/Dockerfile
+
+This is an example Dockerfile. Instructions for building and runing are detailed within.
+
