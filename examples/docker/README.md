@@ -1,12 +1,12 @@
-## Running inside a Docker Container
+﻿## Running inside a Docker Container
 
 If your existing infrastructure is container based (docker) you might be hesitant
 to place remote_syslog2 on your host running wild from your container orchestration;
-Or if you want to develop and test  without "tainting" your enviroment.
+Or if you want to develop and test  without "tainting" your environment.
 
-Placing remote_syslog2 inside of a base centos/ubuntu/debian image would result in a large filesize (>200MB), basing it off of busybox or any small distro can leave you with a functional remote_syslog2 < 50MB.
+Placing remote_syslog2 inside of a base centos/ubuntu/debian image would result in a large file size (>200MB), basing it off of busybox or any small distro can leave you with a functional remote_syslog2 < 50MB.
 
-### Prerequiste 
+### Prerequisite 
 
 Install docker on your host, typically via a package manager,
 be warned you may have stale packages on your system, check docker's latest documentation to insure you install the right package. (https://docs.docker.com/search/?q=install).
@@ -54,13 +54,13 @@ confirm functionality
 
 ### Debugging
 
-Removing the comment lines at the bottom of the dockerfile, rebuild the image, and run the container. You can use the following command `docker exec -it -u 0 sh` to "enter" the container as root, manually run remote_syslog2 via the cli and debug from there.
+Remove the comment lines at the bottom of the dockerfile, rebuild the image, and run the container. You can use the following command `docker exec -it -u 0 sh` to "enter" the container as root, manually run remote_syslog2 via the cli and debug from there.
 
 ### Afterword
 
 Keep the image minimal so it can be re-deployed in your enviroments. 
 
-Use enviroment variables to manipulate remote_syslog2's configuration - docs.docker.com (search ENV) 
+Use environment variables to manipulate remote_syslog2's configuration - docs.docker.com (search ENV) 
 OR volume mount a configuration file `/etc/log_files.yml`
 
 Use the docker cli for debugging/testing/development/prototyping, any other use-case should invole orchestration;
@@ -69,4 +69,4 @@ docs.docker.com (search docker-compose)
 
 google.com (search marathon)
 
-Managing multiple volumes (log files/directories that contain logs) is managable and extensible with proper container orchestration; additionaly steps should be taken in production enviroments to ensure reads/writes/truncating/rotation etc is done properly within docker volumes (fine tunning the enviroment)
+Managing multiple volumes (log files/directories that contain logs) is manageable and extensible with proper container orchestration; additionally steps should be taken in production environments to ensure reads/writes/truncating/rotation etc is done properly within docker volumes (fine tunning the environment)
