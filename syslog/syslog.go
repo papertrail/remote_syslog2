@@ -109,6 +109,11 @@ func Dial(clientHostname, network, raddr string, rootCAs *x509.CertPool, connect
 	// dial once, just to make sure the network is working
 	conn, err := dial(network, raddr, rootCAs, connectTimeout)
 
+	// do not spawn a watch go routine if we cannot connect
+	if err != nil {
+		return nil, err
+	}
+
 	logger := &Logger{
 		ClientHostname:   clientHostname,
 		network:          network,
