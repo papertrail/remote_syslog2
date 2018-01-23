@@ -38,7 +38,7 @@ option or the `-d` invocation flag are required.
 
 ## Installing
 
-Precompiled binaries for Mac, Linux and Windows are available on the
+Precompiled binaries for Mac (Darwin), Linux and Windows are available on the
 [remote_syslog2 releases page][releases].
 
 Untar the package, copy the "remote_syslog" executable into your $PATH,
@@ -63,7 +63,7 @@ Configuration directives can also be specified as command-line arguments (below)
       -p, --dest-port int                 Destination syslog port (default 514)
           --eventmachine-tail             No action, provided for backwards compatibility
       -f, --facility string               Facility (default "user")
-          --hostname string               Local hostname to send from (default "mmartin-mb")
+          --hostname string               Local hostname to send from (default: OS hostname)
           --log string                    Set loggo config, like: --log="<root>=DEBUG" (default "<root>=INFO")
           --new-file-check-interval int   How often to check for new files (seconds) (default 10)
       -D, --no-detach                     Don't daemonize and detach from the terminal; overrides --debug-log-cfg
@@ -186,7 +186,7 @@ than the current set of matches). This is not necessary for globs defined in
 the config file.
 
 
-### Log rotation
+### Log rotation and the behavior of remote_syslog
 
 External log rotation scripts often move or remove an existing log file
 and replace it with a new one (at a new inode). The Linux standard script
@@ -194,11 +194,21 @@ and replace it with a new one (at a new inode). The Linux standard script
 option.  With that option, `logrotate` will copy files, operate on the copies,
 and truncate the original so that the inode remains the same.
 
-This comes closest to ensuring that programs watching these files (including
-`remote_syslog`) will not be affected by, or need to be notified of, the
-rotation. The only tradeoff of `copytruncate` is slightly higher disk usage
-during rotation, so we recommend this option whether or not you use
-`remote_syslog`.
+`remote_syslog` will handle both approaches seamlessly, so it should be no
+concern as to which method is used. If a log file is moved or renamed, 
+and a new file is created (at a new inode), `remote_syslog` will follow that
+new file at the new inode (assuming it has the same absolute path name). If
+a file is copied then truncated, `remote_syslog` will seek to the beginning of
+the truncated file and continue to read it.
+
+#### Log rotation edge cases to be aware of
+
+Some logging programs such as Java's gclog (`-XX:+PrintGC` or `-verbose:gc`)
+do not log in append mode, so if another program such as `logrotate` (set to
+`copytruncate`) truncates the file, on the next write of the Java logger, the
+OS will fill the file with NUL bytes upto the current offset of the file descriptor.
+More info on that [here](http://stackoverflow.com/questions/8353401/garbage-collector-log-loggc-file-rotation-with-logrotate-does-not-work-properl).
+`remote_syslog` will detect those leading NUL bytes, discard them, and log the discard count.
 
 
 ### Excluding files from being sent
@@ -277,7 +287,7 @@ root logger to the `DEBUG` level and output to `logfile.txt`.
 ### Truncated messages
 
 To send messages longer than 1024 characters, use TCP (either TLS or cleartext
-TCP) of UDP. See "[Sending messages securely](#sending-messages-securely)" to
+TCP) instead of UDP. See "[Sending messages securely](#sending-messages-securely)" to
 use TCP with TLS for messages of any length.
 
 [Here's why](http://help.papertrailapp.com/kb/configuration/troubleshooting-remote-syslog-reachability/#message-length) longer UDP messages are impossible to send over

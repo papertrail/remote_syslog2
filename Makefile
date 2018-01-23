@@ -36,17 +36,23 @@ clean:
 	@echo "\033[32mCleaning Build ----> \033[m"
 	$(RM) -rf pkg/*
 	$(RM) -rf build/*
+	$(RM) -rf tmp/*
 
 
 test:
 	@echo
 	@echo "\033[32mTesting ----> \033[m"
-	go test ./...
+	go test -v -race ./...
 
 
 depend:
 	@echo
 	@echo "\033[32mChecking Dependencies ----> \033[m"
+
+ifndef PACKAGE_VERSION
+	@echo "\033[1;33mPACKAGE_VERSION is not set. In order to build a package I need PACKAGE_VERSION=n\033[m"
+	exit 1;
+endif
 
 ifndef GOPATH
 	@echo "\033[1;33mGOPATH is not set. This means that you do not have go setup properly on this machine\033[m"

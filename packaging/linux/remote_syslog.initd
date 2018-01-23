@@ -37,7 +37,7 @@ is_running(){
     # Check if proc is running
     pid=`cat "$pid_file" 2> /dev/null`
     if [[ $pid != "" ]]; then
-      exepath=`readlink /proc/"$pid"/exe 2> /dev/null`      
+      exepath=`readlink /proc/"$pid"/exe 2> /dev/null`
       exe=`basename "$exepath"`
       if [[ $exe == "remote_syslog" ]] || [[ $exe == "remote_syslog (deleted)" ]]; then
         # Process is running
@@ -53,7 +53,7 @@ start(){
 
   unset HOME MAIL USER USERNAME
   $prog -c $config --pid-file=$pid_file $EXTRAOPTIONS
-  RETVAL=$?  
+  RETVAL=$?
   return $RETVAL
 }
 
@@ -75,12 +75,13 @@ stop(){
     else
       echo "Stopped"
       RETVAL=0
+      rm -f $pid_file
     fi
   else
     echo "Not running"
     RETVAL=0
   fi
-  
+
   return $RETVAL
 }
 
@@ -92,7 +93,7 @@ status(){
     echo "Not running"
     RETVAL=3
   fi
-  
+
   return $RETVAL
 }
 
@@ -106,7 +107,7 @@ restart(){
 }
 
 condrestart(){
-  is_running && restart  
+  is_running && restart
   return 0
 }
 

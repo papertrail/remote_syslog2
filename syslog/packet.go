@@ -44,3 +44,35 @@ func (p Packet) Generate(max_size int) string {
 		}
 	}
 }
+
+// A convenience function for testing
+func Parse(line string) (Packet, error) {
+	var (
+		packet   Packet
+		priority int
+		ts       string
+		hostname string
+		tag      string
+	)
+
+	splitLine := strings.Split(line, " - - - ")
+	if len(splitLine) != 2 {
+		return packet, fmt.Errorf("couldn't parse %s", line)
+	}
+
+	fmt.Sscanf(splitLine[0], "<%d>1 %s %s %s", &priority, &ts, &hostname, &tag)
+
+	t, err := time.Parse(rfc5424time, ts)
+	if err != nil {
+		return packet, err
+	}
+
+	return Packet{
+		Severity: Priority(priority & 7),
+		Facility: Priority(priority >> 3),
+		Hostname: hostname,
+		Tag:      tag,
+		Time:     t,
+		Message:  splitLine[1],
+	}, nil
+}

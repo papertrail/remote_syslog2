@@ -85,36 +85,6 @@
 			"revision": "384be41088235af6d26ba66786fd23c45b2d5311"
 		},
 		{
-			"checksumSHA1": "arojRtqOmOlvVF+Bo4mv05dF/wc=",
-			"comment": "v1.0.0-35-ga30252c",
-			"path": "github.com/hpcloud/tail",
-			"revision": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-		},
-		{
-			"checksumSHA1": "JQP5xDlFbFT+PZT8Yk70J5tchUE=",
-			"comment": "v1.0.0-35-ga30252c",
-			"path": "github.com/hpcloud/tail/ratelimiter",
-			"revision": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-		},
-		{
-			"checksumSHA1": "0xM336Lb25URO/1W1/CtGoRygVU=",
-			"comment": "v1.0.0-35-ga30252c",
-			"path": "github.com/hpcloud/tail/util",
-			"revision": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-		},
-		{
-			"checksumSHA1": "mPYzD3FBUUDZEtVGJpOv1+Uf5ss=",
-			"comment": "v1.0.0-35-ga30252c",
-			"path": "github.com/hpcloud/tail/watch",
-			"revision": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-		},
-		{
-			"checksumSHA1": "j65V4wnJboT4pfppNC/gjr2Gl+c=",
-			"comment": "v1.0.0-35-ga30252c",
-			"path": "github.com/hpcloud/tail/winfile",
-			"revision": "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-		},
-		{
 			"checksumSHA1": "KQhA4EQp4Ldwj9nJZnEURlE6aQw=",
 			"path": "github.com/kr/fs",
 			"revision": "2788f0dbd16903de03cb8186e5c7d97b69ad387b",
@@ -136,6 +106,12 @@
 			"checksumSHA1": "JKQ8SPnOodRAk6+QJycVAeYSiSs=",
 			"path": "github.com/nightlyone/lockfile",
 			"revision": "b30dcbfa86e3a1eaa4e6622de2ce57be2c138c10"
+		},
+		{
+			"checksumSHA1": "yVIJdaWkoUJbEhvujesED4rqAnE=",
+			"path": "github.com/papertrail/go-tail/follower",
+			"revision": "1b77c8dfcc6baca12dedfab119135396782b68a1",
+			"revisionTime": "2017-08-01T20:12:34Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
@@ -256,17 +232,6 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "1e65e9bf72c307081cea196f47ef37aed17eb316",
 			"revisionTime": "2016-08-30T12:50:59Z"
-		},
-		{
-			"checksumSHA1": "JfVmsMwyeeepbdw4q4wpN07BuFg=",
-			"comment": "v1.3.0",
-			"path": "gopkg.in/fsnotify.v1",
-			"revision": "30411dbcefb7a1da7e84f75530ad3abe4011b4f8"
-		},
-		{
-			"checksumSHA1": "TO8baX+t1Qs7EmOYth80MkbKzFo=",
-			"path": "gopkg.in/tomb.v1",
-			"revision": "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 		},
 		{
 			"checksumSHA1": "yV+2de12Q/t09hBGYGKEOFr1/zc=",

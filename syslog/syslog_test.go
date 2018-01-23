@@ -6,6 +6,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const clienthost = "clienthost"
@@ -117,17 +119,30 @@ func handle(conn io.ReadCloser, messages chan string) {
 func generatePackets() []Packet {
 	packets := make([]Packet, 10)
 	for i := range packets {
-		t, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z07:00")
+		t, _ := time.Parse(time.RFC3339, "2016-10-05T18:30:00Z07:00")
 		packets[i] = Packet{
 			Severity: SevInfo,
 			Facility: LogLocal1,
-			Time:     t,
+			Time:     t.UTC(),
 			Hostname: clienthost,
 			Tag:      "test",
 			Message:  fmt.Sprintf("message %d", i),
 		}
 	}
 	return packets
+}
+
+func TestParse(t *testing.T) {
+	packets := generatePackets()
+	for _, p := range packets {
+		line := p.Generate(0)
+		parsed, err := Parse(line)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.EqualValues(t, p, parsed)
+	}
 }
 
 func TestSyslog(t *testing.T) {
