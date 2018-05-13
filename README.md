@@ -47,7 +47,7 @@ The repository in question automatically builds latest GitHub release of `remote
     yum install remote_syslog2
     sudo systemctl start remote_syslog
     
-Now edit `/etc/log_files.yml` with your host and port, then start the service:
+Now edit `/etc/log_files.yml` with your host, port and relevant list of log files. After that start the service:
 
     sudo systemctl start remote_syslog
     
