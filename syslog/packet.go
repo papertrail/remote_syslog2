@@ -19,7 +19,7 @@ type Packet struct {
 // like time.RFC3339Nano but with a limit of 6 digits in the SECFRAC part
 const rfc5424time = "2006-01-02T15:04:05.999999Z07:00"
 
-// The combined Facility and Severity of this packet. See RFC5424 for details.
+// Priority: The combined Facility and Severity of this packet. See RFC5424 for details.
 func (p Packet) Priority() Priority {
 	return (p.Facility << 3) | p.Severity
 }
@@ -45,7 +45,7 @@ func (p Packet) Generate(max_size int) string {
 	}
 }
 
-// A convenience function for testing
+// Parse: A convenience function for testing
 func Parse(line string) (Packet, error) {
 	var (
 		packet   Packet

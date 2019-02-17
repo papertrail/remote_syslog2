@@ -3904,7 +3904,7 @@ LEL2TxyJeN4mTvVvk0wVaydWTQBUbHq3tw==
 	return []byte(s)
 }
 
-// Returns an *x509.CertPool that can be used to verify the certificate
+// RootCA returns an *x509.CertPool that can be used to verify the certificate
 // provided by logs.papertrailapp.com. For historical reasons this cert
 // cannot be verified using the default certs provided on many systems.
 func RootCA() *x509.CertPool {

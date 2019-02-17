@@ -143,7 +143,7 @@ func initConfigAndFlags() {
 	config.AutomaticEnv()
 }
 
-// Read in configuration from environment, flags, and specified or default config file.
+// NewConfigFromEnv reads in configuration from environment, flags, and specified or default config file.
 func NewConfigFromEnv() (*Config, error) {
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		return nil, err
