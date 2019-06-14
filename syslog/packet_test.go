@@ -17,7 +17,7 @@ func TestPacketPriority(t *testing.T) {
 	for _, test := range tests {
 		p := Packet{Severity: test.severity, Facility: test.facility}
 		if result := p.Priority(); result != test.priority {
-			t.Errorf("Bad priority, got %s expected %d", result, test.priority)
+			t.Errorf("Bad priority, got %d expected %d", result, test.priority)
 		}
 	}
 }

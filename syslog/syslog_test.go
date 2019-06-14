@@ -12,7 +12,7 @@ import (
 
 const clienthost = "clienthost"
 
-func panicf(s string, i ...interface{}) { panic(fmt.Sprintf(s, i)) }
+func panicf(s string, i ...interface{}) { panic(fmt.Sprintf(s, i...)) }
 
 type testServer struct {
 	Addr     string
