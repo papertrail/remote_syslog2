@@ -38,6 +38,21 @@ option or the `-d` invocation flag are required.
 
 ## Installing
 
+### Quick setup with YUM repository for CentOS 7
+
+Using `yum` repository provides a convinient way to fetch the most recent version of `remote_syslog2`.
+The repository in question automatically builds latest GitHub release of `remote_syslog2`, in no later than 24 hrs.
+
+    yum install https://extras.getpagespeed.com/release-el7-latest.rpm
+    yum install remote_syslog2
+    sudo systemctl start remote_syslog
+    
+Now edit `/etc/log_files.yml` with your host, port and relevant list of log files. After that start the service:
+
+    sudo systemctl start remote_syslog
+    
+### Precompiled binaries    
+
 Precompiled binaries for Mac (Darwin), Linux and Windows are available on the
 [remote_syslog2 releases page][releases].
 
