@@ -93,7 +93,7 @@ func (s *Server) closing() bool {
 }
 
 // Tails a single file
-func (s *Server) tailOne(file, tag string, whence int) {
+func (s *Server) tailOne(file, tag string, whence int, appendPath bool) {
 	defer s.registry.Remove(file)
 
 	t, err := follower.New(file, follower.Config{
@@ -109,6 +109,8 @@ func (s *Server) tailOne(file, tag string, whence int) {
 
 	if tag == "" {
 		tag = path.Base(file)
+	} else if appendPath == true {
+		tag = tag + path.Base(file)
 	}
 
 	for {
@@ -180,6 +182,7 @@ func (s *Server) globFiles(firstPass bool) {
 	for _, glob := range s.config.Files {
 
 		tag := glob.Tag
+		appendPath := glob.AppendPath
 		files, err := filepath.Glob(utils.ResolvePath(glob.Path))
 
 		if err != nil {
@@ -205,7 +208,7 @@ func (s *Server) globFiles(firstPass bool) {
 				}
 
 				s.registry.Add(file)
-				go s.tailOne(file, tag, whence)
+				go s.tailOne(file, tag, whence, appendPath)
 			}
 		}
 	}
