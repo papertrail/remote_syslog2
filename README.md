@@ -56,23 +56,24 @@ Configuration directives can also be specified as command-line arguments (below)
 
 ## Usage
 
-    Usage of remote_syslog2:
-      -c, --configfile string             Path to config (default "/etc/log_files.yml")
-          --debug-log-cfg string          The debug log file; overridden by -D/--no-detach
-      -d, --dest-host string              Destination syslog hostname or IP
-      -p, --dest-port int                 Destination syslog port (default 514)
-          --eventmachine-tail             No action, provided for backwards compatibility
-      -f, --facility string               Facility (default "user")
-          --hostname string               Local hostname to send from (default: OS hostname)
-          --log string                    Set loggo config, like: --log="<root>=DEBUG" (default "<root>=INFO")
-          --new-file-check-interval int   How often to check for new files (seconds) (default 10)
-      -D, --no-detach                     Don't daemonize and detach from the terminal; overrides --debug-log-cfg
-          --no-eventmachine-tail          No action, provided for backwards compatibility
-          --pid-file string               Location of the PID file
-          --poll                          Detect changes by polling instead of inotify
-      -s, --severity string               Severity (default "notice")
-          --tcp                           Connect via TCP (no TLS)
-          --tls                           Connect via TCP with TLS
+    Usage of /remote_syslog/remote_syslog:
+      -c, --configfile="/etc/log_files.yml": Path to config
+          --debug-log-cfg="": the debug log file
+      -d, --dest-host="": Destination syslog hostname or IP
+      -p, --dest-port=0: Destination syslog port
+          --eventmachine-tail=false: No action, provided for backwards compatibility
+      -f, --facility="user": Facility
+          --hostname="": Local hostname to send from
+          --log="<root>=INFO": set loggo config, like: --log="<root>=DEBUG"
+          --new-file-check-interval={0}: How often to check for new files
+      -D, --no-detach=false: Don't daemonize and detach from the terminal
+          --no-eventmachine-tail=false: No action, provided for backwards compatibility
+          --pid-file="": Location of the PID file
+          --poll=false: Detect changes by polling instead of inotify
+      -s, --severity="notice": Severity
+          --tcp=false: Connect via TCP (no TLS)
+          --tcp-max-line-length=0: Maximum TCP line length
+          --tls=false: Connect via TCP with TLS
 
 ## Example
 
