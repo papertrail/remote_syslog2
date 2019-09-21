@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+
+command=/usr/local/bin/remote_syslog
+command_args="-c /etc/log_files.yml"
+pidfile=/var/run/remote_syslog.pid
+name="Remote Syslog Daemon"
+description="Sends logs to papertrailapp.com"
+
+
+depend() {
+  need net
+}
