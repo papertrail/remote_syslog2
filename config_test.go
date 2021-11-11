@@ -66,7 +66,7 @@ func TestRawConfig(t *testing.T) {
 	assert.Equal(c.Facility, fac)
 	assert.NotEqual(c.Hostname, "")
 	assert.Equal(c.Poll, false)
-	assert.Equal(c.RootCAs, papertrail.RootCA())
+	assert.Equal(c.RootCAs.Subjects(), papertrail.RootCA().Subjects())
 }
 
 func TestNoConfigFile(t *testing.T) {

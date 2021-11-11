@@ -1,6 +1,6 @@
 # remote_syslog2
 
-[![Download remote_syslog2](http://papertrail.github.io/remote_syslog2/images/download.png)][releases]
+[![Download remote_syslog2](https://papertrail.github.io/remote_syslog2/images/download.png)][releases]
 
 remote_syslog tails one or more log files and sends syslog messages to a
 remote central syslog server. It generates packets itself, ignoring the system
@@ -190,7 +190,7 @@ the config file.
 
 External log rotation scripts often move or remove an existing log file
 and replace it with a new one (at a new inode). The Linux standard script
-[logrotate](http://iain.cx/src/logrotate/) supports a `copytruncate` config
+[logrotate](https://iain.cx/src/logrotate/) supports a `copytruncate` config
 option.  With that option, `logrotate` will copy files, operate on the copies,
 and truncate the original so that the inode remains the same.
 
@@ -207,7 +207,7 @@ Some logging programs such as Java's gclog (`-XX:+PrintGC` or `-verbose:gc`)
 do not log in append mode, so if another program such as `logrotate` (set to
 `copytruncate`) truncates the file, on the next write of the Java logger, the
 OS will fill the file with NUL bytes upto the current offset of the file descriptor.
-More info on that [here](http://stackoverflow.com/questions/8353401/garbage-collector-log-loggc-file-rotation-with-logrotate-does-not-work-properl).
+More info on that [here](https://stackoverflow.com/questions/8353401/garbage-collector-log-loggc-file-rotation-with-logrotate-does-not-work-properl).
 `remote_syslog` will detect those leading NUL bytes, discard them, and log the discard count.
 
 
@@ -244,7 +244,7 @@ additional instance(s). For example:
     --pid-file=/var/run/remote_syslog_2.pid
 
 Note: Daemonized programs use PID files to identify whether the program is already
-running ([more](http://unix.stackexchange.com/questions/12815/what-are-pid-and-lock-files-for/12818#12818)). Like other daemons, remote_syslog will refuse to run as a
+running ([more](https://unix.stackexchange.com/questions/12815/what-are-pid-and-lock-files-for/12818#12818)). Like other daemons, remote_syslog will refuse to run as a
 daemon (the default mode) when a PID file is present. If a .pid file is
 present but the daemon is not actually running, remove the PID file.
 
@@ -290,7 +290,7 @@ To send messages longer than 1024 characters, use TCP (either TLS or cleartext
 TCP) instead of UDP. See "[Sending messages securely](#sending-messages-securely)" to
 use TCP with TLS for messages of any length.
 
-[Here's why](http://help.papertrailapp.com/kb/configuration/troubleshooting-remote-syslog-reachability/#message-length) longer UDP messages are impossible to send over
+[Here's why](https://help.papertrailapp.com/kb/configuration/troubleshooting-remote-syslog-reachability/#message-length) longer UDP messages are impossible to send over
 the Internet.
 
 ### inotify
@@ -337,7 +337,7 @@ Once again, confirm that remote_syslog starts and then apply this value permanen
 
 * [Paul Morton](https://twitter.com/mortonpe)
 * [Papertrail](https://papertrailapp.com/) staff
-* [Paul Hammond](http://paulhammond.org/)
+* [Paul Hammond](https://paulhammond.org/)
 
 ## Reporting bugs
 
@@ -351,9 +351,8 @@ remote_syslog2 is written in go, and uses [govendor] to manage
 dependencies. To get everything set up, [install go][goinstall] then
 run:
 
-    go get github.com/kardianos/govendor
-    go get github.com/mitchellh/gox
-    go get github.com/papertrail/remote_syslog2
+    go install github.com/mitchellh/gox@latest
+    git clone git@github.com:papertrail/remote_syslog2.git
 
 To run tests:
 
@@ -386,12 +385,12 @@ Once you've made your great commits:
 6. That's it!
 
 
-[Papertrail]: http://papertrailapp.com/
+[Papertrail]: https://papertrailapp.com/
 [remote_syslog]: https://github.com/papertrail/remote_syslog
 [releases]: https://github.com/papertrail/remote_syslog2/releases
 
 [govendor]: https://github.com/kardianos/govendor
-[goinstall]: http://golang.org/doc/install
+[goinstall]: https://golang.org/doc/install
 
-[fk]: http://help.github.com/forking/
+[fk]: https://help.github.com/forking/
 [is]: https://github.com/papertrail/remote_syslog/issues/
