@@ -351,7 +351,7 @@ remote_syslog2 is written in go, and uses [govendor] to manage
 dependencies. To get everything set up, [install go][goinstall] then
 run:
 
-    go install github.com/mitchellh/gox@latest
+    go install github.com/mitchellh/gox
     git clone git@github.com:papertrail/remote_syslog2.git
 
 To run tests:

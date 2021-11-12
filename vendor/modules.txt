@@ -7,6 +7,9 @@ github.com/davecgh/go-spew/spew
 # github.com/fsnotify/fsnotify v1.3.2-0.20160816051541-f12c6236fe7b
 ## explicit
 github.com/fsnotify/fsnotify
+# github.com/hashicorp/go-version v1.0.0
+## explicit
+github.com/hashicorp/go-version
 # github.com/hashicorp/hcl v0.0.0-20160902165219-99df0eb941dd
 ## explicit
 github.com/hashicorp/hcl
@@ -27,6 +30,12 @@ github.com/kr/fs
 # github.com/magiconair/properties v1.7.1-0.20160908093658-0723e352fa35
 ## explicit
 github.com/magiconair/properties
+# github.com/mitchellh/gox v1.0.1
+## explicit
+github.com/mitchellh/gox
+# github.com/mitchellh/iochan v1.0.0
+## explicit
+github.com/mitchellh/iochan
 # github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee
 ## explicit
 github.com/mitchellh/mapstructure

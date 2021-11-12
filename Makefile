@@ -72,7 +72,7 @@ endif
 
 	type gox >/dev/null 2>&1 || { \
 	  echo "\033[1;33mGox is not installed. See https://github.com/mitchellh/gox\033[m"; \
-	  echo "$$ go install github.com/mitchellh/gox@latest"; \
+	  echo "$$ go install github.com/mitchellh/gox"; \
 	  exit 1; \
 	}
 
