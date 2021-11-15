@@ -1,5 +1,3 @@
-export GO15VENDOREXPERIMENT=1
-
 include packaging/Makefile.packaging
 
 .PHONY: depend clean test build tarball
