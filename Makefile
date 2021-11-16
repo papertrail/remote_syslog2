@@ -1,5 +1,3 @@
-export GO15VENDOREXPERIMENT=1
-
 include packaging/Makefile.packaging
 
 .PHONY: depend clean test build tarball
@@ -70,15 +68,9 @@ endif
 	  exit 1; \
 	}
 
-	type govendor >/dev/null 2>&1|| { \
-	  echo "\033[1;33mgovendor is not installed. See https://github.com/kardianos/govendor\033[m"; \
-	  echo "$$ go get -u github.com/kardianos/govendor"; \
-	  exit 1; \
-	}
-
 	type gox >/dev/null 2>&1 || { \
 	  echo "\033[1;33mGox is not installed. See https://github.com/mitchellh/gox\033[m"; \
-	  echo "$$ go get github.com/mitchellh/gox"; \
+	  echo "$$ go install github.com/mitchellh/gox"; \
 	  exit 1; \
 	}
 
