@@ -8,6 +8,7 @@ destination:
   host: logs.papertrailapp.com
   port: 514
   protocol: tls
+  token: 0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz
 exclude_patterns:
   - don't log on me
   - do \w+ on me

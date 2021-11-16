@@ -64,6 +64,20 @@ func TestPacketGenerate(t *testing.T) {
 			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - - %% It's time to make the do-nuts.",
 		},
 		{
+			// test ingestion token
+			Packet{
+				Severity: SevNotice,
+				Facility: LogLocal4,
+				Time:     parseTime("2003-08-24T05:14:15.000003-07:00"),
+				Hostname: "192.0.2.1",
+				Tag:      "myproc",
+				Token:    "0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz",
+				Message:  `%% It's time to make the do-nuts.`,
+			},
+			0,
+			"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc - - [0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz@41058] %% It's time to make the do-nuts.",
+		},
+		{
 			// test that fractional seconds is at most 6 digits long
 			Packet{
 				Severity: SevNotice,

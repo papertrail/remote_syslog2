@@ -61,8 +61,10 @@ Configuration directives can also be specified as command-line arguments (below)
           --debug-log-cfg string          The debug log file; overridden by -D/--no-detach
       -d, --dest-host string              Destination syslog hostname or IP
       -p, --dest-port int                 Destination syslog port (default 514)
+      -t, --dest-token string             Destination ingestion token
           --eventmachine-tail             No action, provided for backwards compatibility
       -f, --facility string               Facility (default "user")
+      -h, --help                          Display this help message
           --hostname string               Local hostname to send from (default: OS hostname)
           --log string                    Set loggo config, like: --log="<root>=DEBUG" (default "<root>=INFO")
           --new-file-check-interval int   How often to check for new files (seconds) (default 10)
@@ -73,6 +75,7 @@ Configuration directives can also be specified as command-line arguments (below)
       -s, --severity string               Severity (default "notice")
           --tcp                           Connect via TCP (no TLS)
           --tls                           Connect via TCP with TLS
+      -V, --version                       Display version and exit
 
 ## Example
 

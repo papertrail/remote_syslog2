@@ -6,13 +6,14 @@ import (
 	"time"
 )
 
-// A Packet represents an RFC5425 syslog message
+// A Packet represents an RFC5424 syslog message
 type Packet struct {
 	Severity Priority
 	Facility Priority
+	Time     time.Time
 	Hostname string
 	Tag      string
-	Time     time.Time
+	Token    string
 	Message  string
 }
 
@@ -24,6 +25,15 @@ func (p Packet) Priority() Priority {
 	return (p.Facility << 3) | p.Severity
 }
 
+// Ingestion Token formatted as Loggly's SD-ID format. See RFC5424 for details.
+func (p Packet) structuredData() string {
+	if p.Token == "" {
+		return "-"
+	} else {
+		return fmt.Sprintf("[%s@41058]", p.Token)
+	}
+}
+
 func (p Packet) cleanMessage() string {
 	s := strings.Replace(p.Message, "\n", " ", -1)
 	s = strings.Replace(s, "\r", " ", -1)
@@ -33,10 +43,10 @@ func (p Packet) cleanMessage() string {
 // Generate creates a RFC5424 syslog format string for this packet.
 func (p Packet) Generate(max_size int) string {
 	ts := p.Time.Format(rfc5424time)
+	msg := fmt.Sprintf("<%d>1 %s %s %s - - %s %s", p.Priority(), ts, p.Hostname, p.Tag, p.structuredData(), p.cleanMessage())
 	if max_size == 0 {
-		return fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.cleanMessage())
+		return msg
 	} else {
-		msg := fmt.Sprintf("<%d>1 %s %s %s - - - %s", p.Priority(), ts, p.Hostname, p.Tag, p.cleanMessage())
 		if len(msg) > max_size {
 			return msg[0:max_size]
 		} else {

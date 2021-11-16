@@ -141,6 +141,7 @@ func (s *Server) tailOne(file, tag string, whence int) {
 					Time:     time.Now(),
 					Hostname: s.logger.ClientHostname,
 					Tag:      tag,
+					Token:    s.config.Destination.Token,
 					Message:  l,
 				})
 
