@@ -26,6 +26,7 @@ func TestRawConfig(t *testing.T) {
 	assert.Equal(c.Destination.Host, "logs.papertrailapp.com")
 	assert.Equal(c.Destination.Port, 514)
 	assert.Equal(c.Destination.Protocol, "tls")
+	assert.Equal(c.Destination.Token, "0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz")
 	assert.Equal(c.ExcludePatterns, []*regexp.Regexp{regexp.MustCompile("don't log on me"), regexp.MustCompile(`do \w+ on me`)})
 	assert.Equal(c.ExcludeFiles, []*regexp.Regexp{regexp.MustCompile(`\.DS_Store`)})
 	assert.Equal(c.Files, []LogFile{
@@ -85,4 +86,5 @@ func TestNoConfigFile(t *testing.T) {
 	assert.Equal("localhost", c.Destination.Host)
 	assert.Equal(999, c.Destination.Port)
 	assert.Equal("udp", c.Destination.Protocol)
+	assert.Equal("", c.Destination.Token)
 }

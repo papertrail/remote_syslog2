@@ -58,6 +58,7 @@ type Config struct {
 		Host     string
 		Port     int
 		Protocol string
+		Token    string
 	}
 	RootCAs *x509.CertPool
 }
@@ -97,6 +98,9 @@ func initConfigAndFlags() {
 
 	flags.IntP("dest-port", "p", 514, "Destination syslog port")
 	config.BindPFlag("destination.port", flags.Lookup("dest-port"))
+
+	flags.StringP("dest-token", "t", "", "Destination ingestion token")
+	config.BindPFlag("destination.token", flags.Lookup("dest-token"))
 
 	flags.StringP("facility", "f", "user", "Facility")
 	config.BindPFlag("facility", flags.Lookup("facility"))
@@ -191,6 +195,7 @@ func NewConfigFromEnv() (*Config, error) {
 	c.Destination.Host = config.GetString("destination.host")
 	c.Destination.Port = config.GetInt("destination.port")
 	c.Destination.Protocol = config.GetString("destination.protocol")
+	c.Destination.Token = config.GetString("destination.token")
 
 	// explicitly set destination protocol if we've asked for tcp or tls
 	if c.TLS {

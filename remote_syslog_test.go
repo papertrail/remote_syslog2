@@ -165,6 +165,7 @@ func testConfig() *Config {
 			Host     string
 			Port     int
 			Protocol string
+			Token    string
 		}{
 			Host:     addr.host,
 			Port:     addr.port,
