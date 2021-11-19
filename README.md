@@ -350,9 +350,8 @@ Once again, confirm that remote_syslog starts and then apply this value permanen
 
 ## Development
 
-remote_syslog2 is written in go, and uses [govendor] to manage
-dependencies. To get everything set up, [install go][goinstall] then
-run:
+remote_syslog2 is written in go. To get everything set up,
+[install go][goinstall] then run:
 
     go install github.com/mitchellh/gox
     git clone git@github.com:papertrail/remote_syslog2.git
@@ -392,7 +391,6 @@ Once you've made your great commits:
 [remote_syslog]: https://github.com/papertrail/remote_syslog
 [releases]: https://github.com/papertrail/remote_syslog2/releases
 
-[govendor]: https://github.com/kardianos/govendor
 [goinstall]: https://golang.org/doc/install
 
 [fk]: https://help.github.com/forking/
