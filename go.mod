@@ -3,7 +3,7 @@ module github.com/papertrail/remote_syslog2
 go 1.17
 
 require (
-	github.com/VividCortex/godaemon v0.0.0-20131002161106-2fdf3f9fa715
+	github.com/VividCortex/godaemon v1.0.0
 	github.com/howbazaar/loggo v0.0.0-20131030201820-384be4108823
 	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee

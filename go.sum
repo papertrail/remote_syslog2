@@ -1,5 +1,5 @@
-github.com/VividCortex/godaemon v0.0.0-20131002161106-2fdf3f9fa715 h1:0yPC4AyN7nFlSPjS1gKFFlOQRrhfbKlCEyVWK9CDY1E=
-github.com/VividCortex/godaemon v0.0.0-20131002161106-2fdf3f9fa715/go.mod h1:Y8CJ3IwPIAkMhv/rRUWIlczaeqd9ty9yrl+nc2AbaL4=
+github.com/VividCortex/godaemon v1.0.0 h1:aHYrScWvgaSOdAoYCdObWXLm+e1rldP9Pwb1ZvuZkQw=
+github.com/VividCortex/godaemon v1.0.0/go.mod h1:hBWe/72KbGt/lb95E+Sh9ersdYbB57Dt6CG66S1YPno=
 github.com/davecgh/go-spew v0.0.0-20151105211317-5215b55f46b2 h1:5zdDAMuB3gvbHB1m2BZT9+t9w+xaBmK3ehb7skDXcwM=
 github.com/davecgh/go-spew v0.0.0-20151105211317-5215b55f46b2/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fsnotify/fsnotify v1.3.2-0.20160816051541-f12c6236fe7b h1:clQtr7BsnoijdumdhlbbOGglPb1lIAJ3yTPjYOHlKdQ=
