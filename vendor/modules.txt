@@ -1,5 +1,5 @@
-# github.com/VividCortex/godaemon v0.0.0-20131002161106-2fdf3f9fa715
-## explicit
+# github.com/VividCortex/godaemon v1.0.0
+## explicit; go 1.12
 github.com/VividCortex/godaemon
 # github.com/davecgh/go-spew v0.0.0-20151105211317-5215b55f46b2
 ## explicit

@@ -1,20 +1,18 @@
 include packaging/Makefile.packaging
 
 .PHONY: depend clean test build tarball
-.DEFAULT: build
 
+GOFLAGS="-trimpath"
 GOLDFLAGS="-X main.Version=$(PACKAGE_VERSION)"
 
-X86_PLATFORMS := windows linux
-X64_PLATFORMS := windows linux
+X86_PLATFORMS := windows linux freebsd
+X64_PLATFORMS := windows linux freebsd darwin
 ARM_PLATFORMS := linux
-CGO_PLATFORMS := darwin
 
 BUILD_PAIRS := $(foreach p,$(X86_PLATFORMS), $(p)/i386 )
 BUILD_PAIRS += $(foreach p,$(X64_PLATFORMS), $(p)/amd64 )
 BUILD_PAIRS += $(foreach p,$(ARM_PLATFORMS), $(p)/armhf )
 BUILD_PAIRS += $(foreach p,$(ARM_PLATFORMS), $(p)/arm64 )
-BUILD_PAIRS += $(foreach p,$(CGO_PLATFORMS), $(p)/amd64 )
 
 BUILD_DOCS := README.md LICENSE example_config.yml
 
@@ -24,11 +22,10 @@ package: $(BUILD_PAIRS)
 build: depend clean test
 	@echo
 	@echo "\033[32mBuilding ----> \033[m"
-	gox -ldflags=$(GOLDFLAGS) -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
-	gox -ldflags=$(GOLDFLAGS) -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
-	gox -ldflags=$(GOLDFLAGS) -os="$(ARM_PLATFORMS)" -arch="arm" -output "build/{{.OS}}/armhf/remote_syslog/remote_syslog"
-	gox -ldflags=$(GOLDFLAGS) -os="$(ARM_PLATFORMS)" -arch="arm64" -output "build/{{.OS}}/arm64/remote_syslog/remote_syslog"
-	gox -ldflags=$(GOLDFLAGS) -cgo -os="$(CGO_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	GOFLAGS=$(GOFLAGS) gox -ldflags=$(GOLDFLAGS) -os="$(X64_PLATFORMS)" -arch="amd64" -output "build/{{.OS}}/amd64/remote_syslog/remote_syslog"
+	GOFLAGS=$(GOFLAGS) gox -ldflags=$(GOLDFLAGS) -os="$(X86_PLATFORMS)" -arch="386" -output "build/{{.OS}}/i386/remote_syslog/remote_syslog"
+	GOFLAGS=$(GOFLAGS) gox -ldflags=$(GOLDFLAGS) -os="$(ARM_PLATFORMS)" -arch="arm" -output "build/{{.OS}}/armhf/remote_syslog/remote_syslog"
+	GOFLAGS=$(GOFLAGS) gox -ldflags=$(GOLDFLAGS) -os="$(ARM_PLATFORMS)" -arch="arm64" -output "build/{{.OS}}/arm64/remote_syslog/remote_syslog"
 
 
 clean:
