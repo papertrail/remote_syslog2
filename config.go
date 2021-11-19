@@ -49,6 +49,7 @@ type Config struct {
 	NoDetach             bool             `mapstructure:"no_detach"`
 	TCP                  bool             `mapstructure:"tcp"`
 	TLS                  bool             `mapstructure:"tls"`
+	TruncateHostname     bool             `mapstructure:"truncate_hostname"`
 	Files                []LogFile
 	Hostname             string
 	Severity             syslog.Priority
@@ -108,6 +109,9 @@ func initConfigAndFlags() {
 	hostname, _ := os.Hostname()
 	flags.String("hostname", hostname, "Local hostname to send from")
 	config.BindPFlag("hostname", flags.Lookup("hostname"))
+
+	flags.Bool("truncate-hostname", false, "Local truncate-hostname to send from")
+	config.BindPFlag("truncate_hostname", flags.Lookup("truncate-hostname"))
 
 	flags.String("pid-file", "", "Location of the PID file")
 	config.BindPFlag("pid_file", flags.Lookup("pid-file"))
@@ -203,6 +207,14 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 	if c.TCP {
 		c.Destination.Protocol = "tcp"
+	}
+
+	// truncate hostname if requested in configuration
+	if c.TruncateHostname {
+		i := strings.Index(c.Hostname, ".")
+		if i != -1 {
+			c.Hostname = c.Hostname[:i]
+		}
 	}
 
 	// add the papertrail root CA if necessary
