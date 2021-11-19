@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/papertrail/remote_syslog2/papertrail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/papertrail/remote_syslog2/utils"
 	"github.com/spf13/pflag"
@@ -203,11 +202,6 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 	if c.TCP {
 		c.Destination.Protocol = "tcp"
-	}
-
-	// add the papertrail root CA if necessary
-	if c.Destination.Protocol == "tls" && c.Destination.Host == "logs.papertrailapp.com" {
-		c.RootCAs = papertrail.RootCA()
 	}
 
 	// figure out where to create a pidfile if none was configured

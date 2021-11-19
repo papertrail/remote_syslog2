@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/papertrail/remote_syslog2/papertrail"
 	"github.com/papertrail/remote_syslog2/syslog"
 	"github.com/stretchr/testify/assert"
 )
@@ -67,7 +66,6 @@ func TestRawConfig(t *testing.T) {
 	assert.Equal(c.Facility, fac)
 	assert.NotEqual(c.Hostname, "")
 	assert.Equal(c.Poll, false)
-	assert.Equal(c.RootCAs.Subjects(), papertrail.RootCA().Subjects())
 }
 
 func TestNoConfigFile(t *testing.T) {
