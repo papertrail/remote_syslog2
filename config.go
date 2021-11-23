@@ -173,7 +173,7 @@ func NewConfigFromEnv() (*Config, error) {
 
 	// override daemonize setting for platforms that don't support it
 	if !utils.CanDaemonize {
-		config.Set("no_daemonize", true)
+		config.Set("no_detach", true)
 	}
 
 	// unmarshal environment config into our Config object here
