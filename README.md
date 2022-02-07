@@ -135,7 +135,10 @@ to log to (as a hash). Wildcards are supported using * and standard shell
 globbing. Filenames given on the command line are additive to those in
 the config file.
 
-Only 1 destination server is supported; the command-line argument wins.
+One main destination, and up to 10 optional destinations servers (indexed 1
+to 10) can be specified in the configuration file.
+
+Using the command-line, only a single destination can be specified, and this one overrides the destination server specified using the main 'destination' config element.
 
     files:
      - /var/log/httpd/access_log
@@ -146,6 +149,12 @@ Only 1 destination server is supported; the command-line argument wins.
       host: logs.papertrailapp.com
       port: 12345
       protocol: tls
+    destination1:
+      host: logs2.papertrailapp.com
+      port: 67890
+      protocol: tls
+    destination2:
+    ...
 
 remote_syslog sends the name of the file without a path ("mysqld.log") as
 the syslog tag (program name).

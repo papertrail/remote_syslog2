@@ -19,6 +19,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Destination struct {
+	Host     string
+	Port     int
+	Protocol string
+	Token    string
+}
+
 var (
 	config *viper.Viper
 	flags  *pflag.FlagSet
@@ -26,11 +33,14 @@ var (
 	Version string
 
 	ErrUsage = errors.New("usage")
+
+	Dest Destination
 )
 
 const (
-	envPrefix         = "remote_syslog"
-	defaultConfigFile = "/etc/log_files.yml"
+	envPrefix           = "remote_syslog"
+	defaultConfigFile   = "/etc/log_files.yml"
+	maxDestinationIndex = 10
 )
 
 // The global Config object for remote_syslog2 server. "mapstructure" tags
@@ -53,13 +63,8 @@ type Config struct {
 	Severity             syslog.Priority
 	Facility             syslog.Priority
 	Poll                 bool
-	Destination          struct {
-		Host     string
-		Port     int
-		Protocol string
-		Token    string
-	}
-	RootCAs *x509.CertPool
+	Destinations         []Destination
+	RootCAs              *x509.CertPool
 }
 
 type LogFile struct {
@@ -191,17 +196,40 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	// explicitly set destination fields since they are nested
-	c.Destination.Host = config.GetString("destination.host")
-	c.Destination.Port = config.GetInt("destination.port")
-	c.Destination.Protocol = config.GetString("destination.protocol")
-	c.Destination.Token = config.GetString("destination.token")
+
+	Dest.Host = config.GetString("destination.host")
+	Dest.Port = config.GetInt("destination.port")
+	Dest.Protocol = config.GetString("destination.protocol")
+	Dest.Token = config.GetString("destination.token")
 
 	// explicitly set destination protocol if we've asked for tcp or tls
 	if c.TLS {
-		c.Destination.Protocol = "tls"
+		Dest.Protocol = "tls"
 	}
 	if c.TCP {
-		c.Destination.Protocol = "tcp"
+		Dest.Protocol = "tcp"
+	}
+
+	c.Destinations = append(c.Destinations, Dest)
+
+	// explicitly set fields for any optional destinations
+	for i := 1; i <= maxDestinationIndex; i++ {
+		Dest.Host = config.GetString(fmt.Sprintf("destination%d.host", i))
+		if Dest.Host != "" {
+			Dest.Port = config.GetInt(fmt.Sprintf("destination%d.port", i))
+			Dest.Protocol = config.GetString(fmt.Sprintf("destination%d.protocol", i))
+			Dest.Token = config.GetString(fmt.Sprintf("destination%d.token", i))
+
+			// explicitly set destination protocol if we've asked for tcp or tls
+			if c.TLS {
+				Dest.Protocol = "tls"
+			}
+			if c.TCP {
+				Dest.Protocol = "tcp"
+			}
+
+			c.Destinations = append(c.Destinations, Dest)
+		}
 	}
 
 	// figure out where to create a pidfile if none was configured
@@ -223,7 +251,7 @@ func NewConfigFromEnv() (*Config, error) {
 }
 
 func (c *Config) Validate() error {
-	if c.Destination.Host == "" {
+	if c.Destinations[0].Host == "" {
 		return fmt.Errorf("No destination hostname specified")
 	}
 

@@ -21,7 +21,7 @@ var log = loggo.GetLogger("")
 
 type Server struct {
 	config   *Config
-	logger   *syslog.Logger
+	loggers  []*syslog.Logger
 	registry WorkerRegistry
 	stopChan chan struct{}
 	stopped  bool
@@ -47,26 +47,34 @@ func (s *Server) Start() error {
 
 	loggo.ConfigureLoggers(s.config.LogLevels)
 
-	raddr := net.JoinHostPort(s.config.Destination.Host, strconv.Itoa(s.config.Destination.Port))
-	log.Infof("Connecting to %s over %s", raddr, s.config.Destination.Protocol)
-
 	var err error
-	s.logger, err = syslog.Dial(
-		s.config.Hostname,
-		s.config.Destination.Protocol,
-		raddr, s.config.RootCAs,
-		s.config.ConnectTimeout,
-		s.config.WriteTimeout,
-		s.config.TcpMaxLineLength,
-	)
-	if err != nil {
-		log.Errorf("Initial connection to server failed: %v - connection will be retried", err)
+	for _, dest := range s.config.Destinations {
+		raddr := net.JoinHostPort(dest.Host, strconv.Itoa(dest.Port))
+		log.Infof("Connecting to %s over %s", raddr, dest.Protocol)
+
+		var logger *syslog.Logger
+		logger, err = syslog.Dial(
+			s.config.Hostname,
+			dest.Protocol,
+			raddr, s.config.RootCAs,
+			s.config.ConnectTimeout,
+			s.config.WriteTimeout,
+			s.config.TcpMaxLineLength,
+		)
+		if err != nil {
+			log.Errorf("Initial connection to server failed: %v - connection will be retried", err)
+		}
+		if logger != nil {
+			s.loggers = append(s.loggers, logger)
+		}
 	}
 
 	go s.tailFiles()
 
-	for err = range s.logger.Errors {
-		log.Errorf("Syslog error: %v", err)
+	for _, logger := range s.loggers {
+		for err = range logger.Errors {
+			log.Errorf("Syslog error: %v", err)
+		}
 	}
 
 	return nil
@@ -81,7 +89,9 @@ func (s *Server) Close() {
 		s.stopChan <- struct{}{}
 
 		log.Infof("Shutting down...")
-		s.logger.Close()
+		for _, logger := range s.loggers {
+			logger.Close()
+		}
 	}
 }
 
@@ -134,16 +144,17 @@ func (s *Server) tailOne(file, tag string, whence int) {
 			l := line.String()
 
 			if !matchExps(l, s.config.ExcludePatterns) {
-
-				s.logger.Write(syslog.Packet{
-					Severity: s.config.Severity,
-					Facility: s.config.Facility,
-					Time:     time.Now(),
-					Hostname: s.logger.ClientHostname,
-					Tag:      tag,
-					Token:    s.config.Destination.Token,
-					Message:  l,
-				})
+				for i, logger := range s.loggers {
+					logger.Write(syslog.Packet{
+						Severity: s.config.Severity,
+						Facility: s.config.Facility,
+						Time:     time.Now(),
+						Hostname: logger.ClientHostname,
+						Tag:      tag,
+						Token:    s.config.Destinations[i].Token,
+						Message:  l,
+					})
+				}
 
 				log.Tracef("Forwarding line: %s", l)
 

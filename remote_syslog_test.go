@@ -161,15 +161,12 @@ func testConfig() *Config {
 		Hostname:             "testhost",
 		Severity:             severity,
 		Facility:             facility,
-		Destination: struct {
-			Host     string
-			Port     int
-			Protocol string
-			Token    string
-		}{
-			Host:     addr.host,
-			Port:     addr.port,
-			Protocol: "tcp",
+		Destinations: []Destination{
+			{
+				Host:     addr.host,
+				Port:     addr.port,
+				Protocol: "tcp",
+			},
 		},
 		Files: []LogFile{
 			{

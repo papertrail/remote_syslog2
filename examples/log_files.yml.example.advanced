@@ -21,6 +21,10 @@ destination:
   host: HOST.papertrailapp.com # NOTE: change this to YOUR papertrail host!
   port: 12345   # NOTE: change this to YOUR papertrail port!
   protocol: tls
+destination1:
+  host: HOST1.papertrailapp.com # NOTE: change this to YOUR papertrail host!
+  port: 67890 # NOTE: change this to YOUR papertrail port!
+  protocol: tls
 facility: local7
 severity: warn
 new_file_check_interval: "10" # Check every 10 seconds
