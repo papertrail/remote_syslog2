@@ -1,0 +1,76 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: papertrail-remote-syslog
+data:
+  domain: kubernetes.default.svc
+  config.yml: |
+    files:
+      - re:containers/(?P<tag>.*)-.{64}\.log=/var/log/containers/*.log
+    exclude_files:
+      - .*papertrail-remote.*
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: papertrail-destination
+stringData:
+  papertrail-destination: syslog+tls://SERVER:PORT
+type: Opaque
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: papertrail-remote-syslog2
+spec:
+  selector:
+    matchLabels:
+      name: papertrail-remote-syslog2
+  template:
+    metadata:
+      labels:
+        name: papertrail-remote-syslog2
+    spec:
+      imagePullSecrets:
+        - name: quay-secret
+      containers:
+        - resources:
+            requests:
+              cpu: 0.15
+            limits:
+              memory: 500Mi
+          env:
+            - name: "REMOTE_SYSLOG_DESTINATION.URI"
+              valueFrom:
+                secretKeyRef:
+                  name: papertrail-destination
+                  key: papertrail-destination
+            - name: "REMOTE_SYSLOG_CONFIG_FILE"
+              value: /config/config.yml
+            - name: "REMOTE_SYSLOG_HOSTNAME"
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: "REMOTE_SYSLOG_DOMAIN"
+              valueFrom:
+                configMapKeyRef:
+                  name: papertrail-remote-syslog
+                  key: domain
+          image: quay.io/redsift/remote_syslog2:latest
+          name: remote-syslog
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: log
+              mountPath: /var/log
+      volumes:
+        - name: log
+          hostPath:
+              path: /var/log
+        - name: config
+          configMap:
+            name: papertrail-remote-syslog
+            items:
+            - key: "config.yml"
+              path: "config.yml"
