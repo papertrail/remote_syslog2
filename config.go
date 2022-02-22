@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -55,6 +56,7 @@ type Config struct {
 	Facility             syslog.Priority
 	Poll                 bool
 	Destination          struct {
+		URI      string
 		Host     string
 		Port     int
 		Protocol string
@@ -92,6 +94,9 @@ func initConfigAndFlags() {
 	// set available commandline flags here:
 	flags.StringP("configfile", "c", defaultConfigFile, "Path to config")
 	config.BindPFlag("config_file", flags.Lookup("configfile"))
+
+	flags.String("dest-uri", "", "Destination as a URI, overrides dest-host, dest-port, and transport")
+	config.BindPFlag("destination.uri", flags.Lookup("dest-uri"))
 
 	flags.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
 	config.BindPFlag("destination.host", flags.Lookup("dest-host"))
@@ -195,6 +200,7 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	// explicitly set destination fields since they are nested
+	c.Destination.URI = config.GetString("destination.uri")
 	c.Destination.Host = config.GetString("destination.host")
 	c.Destination.Port = config.GetInt("destination.port")
 	c.Destination.Protocol = config.GetString("destination.protocol")
@@ -227,6 +233,32 @@ func NewConfigFromEnv() (*Config, error) {
 }
 
 func (c *Config) Validate() error {
+	if c.Destination.URI != "" {
+		u, err := url.Parse(c.Destination.URI)
+		if err != nil {
+			return err
+		}
+
+		c.Destination.Host = u.Hostname()
+		c.Destination.Port, err = strconv.Atoi(u.Port())
+
+		if err != nil {
+			return err
+		}
+
+		sp := strings.SplitN(strings.ToLower(u.Scheme), "+", 2)
+
+		if sp[0] != "syslog" {
+			return fmt.Errorf("destination URI contains invalid protocol")
+		}
+
+		if len(sp) == 1 {
+			c.Destination.Protocol = "udp"
+		} else {
+			c.Destination.Protocol = sp[1]
+		}
+	}
+
 	if c.Domain != "" {
 		c.Hostname = strings.TrimRight(c.Hostname, ".") + "." + strings.TrimLeft(c.Domain, ".")
 		c.Domain = ""

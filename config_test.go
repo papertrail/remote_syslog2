@@ -86,3 +86,21 @@ func TestNoConfigFile(t *testing.T) {
 	assert.Equal("udp", c.Destination.Protocol)
 	assert.Equal("", c.Destination.Token)
 }
+
+func TestURIInConfig(t *testing.T) {
+	assert := assert.New(t)
+	initConfigAndFlags()
+
+	flags.Set("dest-uri", "syslog+tls://localhost:999")
+
+	c, err := NewConfigFromEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NoError(c.Validate())
+	assert.Equal("localhost", c.Destination.Host)
+	assert.Equal(999, c.Destination.Port)
+	assert.Equal("tls", c.Destination.Protocol)
+	assert.Equal("", c.Destination.Token)
+}
