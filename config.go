@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -66,8 +67,25 @@ type Config struct {
 }
 
 type LogFile struct {
-	Path string
-	Tag  string
+	Path          string
+	Tag           string
+	TagPattern    *regexp.Regexp
+	TagMatchIndex int
+}
+
+func (l *LogFile) TagFromFileName(fileName string) (string, bool) {
+	if l.TagPattern == nil {
+		if l.Tag == "" {
+			return path.Base(fileName), true
+		}
+		return l.Tag, true
+	}
+
+	if elems := l.TagPattern.FindStringSubmatch(fileName); len(elems) > l.TagMatchIndex {
+		return elems[l.TagMatchIndex], true
+	} else {
+		return "", false
+	}
 }
 
 func init() {
@@ -325,6 +343,26 @@ func decodeRegexps(f interface{}) ([]*regexp.Regexp, error) {
 	return exps, nil
 }
 
+func decodeTagRegex(tag string) (*regexp.Regexp, int, error) {
+	r, err := regexp.Compile(tag[3:])
+	if err != nil {
+		return nil, 0, err
+	}
+	for i, n := range r.SubexpNames() {
+		if n == "tag" {
+			return r, i, nil
+		}
+	}
+	switch r.NumSubexp() {
+	case 0:
+		return r, 0, nil
+	case 1:
+		return r, 1, nil
+	default:
+		return nil, 0, errors.New("invalid tag expression: more than one sub-expression and none is named 'tag'")
+	}
+}
+
 func decodeLogFiles(f interface{}) ([]LogFile, error) {
 	var (
 		files []LogFile
@@ -341,7 +379,16 @@ func decodeLogFiles(f interface{}) ([]LogFile, error) {
 			lf := strings.Split(val, "=")
 			switch len(lf) {
 			case 2:
-				files = append(files, LogFile{Tag: lf[0], Path: lf[1]})
+				tag := lf[0]
+				if strings.HasPrefix(tag, "re:") {
+					r, idx, err := decodeTagRegex(tag)
+					if err != nil {
+						return files, err
+					}
+					files = append(files, LogFile{Tag: "", Path: lf[1], TagPattern: r, TagMatchIndex: idx})
+				} else {
+					files = append(files, LogFile{Tag: lf[0], Path: lf[1]})
+				}
 			case 1:
 				files = append(files, LogFile{Path: val})
 			default:

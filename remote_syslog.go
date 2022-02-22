@@ -180,7 +180,6 @@ func (s *Server) globFiles(firstPass bool) {
 	log.Debugf("Evaluating file globs")
 	for _, glob := range s.config.Files {
 
-		tag := glob.Tag
 		files, err := filepath.Glob(utils.ResolvePath(glob.Path))
 
 		if err != nil {
@@ -206,6 +205,13 @@ func (s *Server) globFiles(firstPass bool) {
 				}
 
 				s.registry.Add(file)
+
+				tag, ok := glob.TagFromFileName(file)
+				if !ok {
+					log.Warningf("Tag pattern did not match file: %s, skipping", file)
+					continue
+				}
+
 				go s.tailOne(file, tag, whence)
 			}
 		}
