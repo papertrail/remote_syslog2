@@ -50,6 +50,7 @@ type Config struct {
 	TLS                  bool             `mapstructure:"tls"`
 	Files                []LogFile
 	Hostname             string
+	Domain               string
 	Severity             syslog.Priority
 	Facility             syslog.Priority
 	Poll                 bool
@@ -107,6 +108,9 @@ func initConfigAndFlags() {
 	hostname, _ := os.Hostname()
 	flags.String("hostname", hostname, "Local hostname to send from")
 	config.BindPFlag("hostname", flags.Lookup("hostname"))
+
+	flags.StringP("domain", "", "", "Domain suffix for hostname")
+	config.BindPFlag("domain", flags.Lookup("domain"))
 
 	flags.String("pid-file", "", "Location of the PID file")
 	config.BindPFlag("pid_file", flags.Lookup("pid-file"))
@@ -223,6 +227,11 @@ func NewConfigFromEnv() (*Config, error) {
 }
 
 func (c *Config) Validate() error {
+	if c.Domain != "" {
+		c.Hostname = strings.TrimRight(c.Hostname, ".") + "." + strings.TrimLeft(c.Domain, ".")
+		c.Domain = ""
+	}
+
 	if c.Destination.Host == "" {
 		return fmt.Errorf("No destination hostname specified")
 	}
