@@ -2,7 +2,7 @@ FROM golang:alpine AS builder
 
 WORKDIR $GOPATH/src/github.com/papertrail/remote_syslog2
 
-COPY ../.. .
+COPY . .
 
 RUN go get -v
 
