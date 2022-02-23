@@ -1,5 +1,12 @@
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: papertrail-destination
+stringData:
+  papertrail-destination: syslog+tls://SERVER:PORT
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: papertrail-remote-syslog
@@ -10,14 +17,6 @@ data:
       - re:containers/(?P<tag>.*)-.{64}\.log=/var/log/containers/*.log
     exclude_files:
       - .*papertrail-remote.*
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: papertrail-destination
-stringData:
-  papertrail-destination: syslog+tls://SERVER:PORT
-type: Opaque
 ---
 apiVersion: apps/v1
 kind: DaemonSet
