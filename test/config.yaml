@@ -4,6 +4,9 @@ files:
   - "nginx=/var/log/nginx/nginx.log"
   - path: /var/log/httpd/access_log
     tag: apache
+  - path: /var/log/syslog
+    tag: debian
+    hostname: myhost.mydomain.com
 destination:
   host: logs.papertrailapp.com
   port: 514

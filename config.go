@@ -65,6 +65,7 @@ type Config struct {
 type LogFile struct {
 	Path string
 	Tag  string
+	Hostname string
 }
 
 func init() {
@@ -299,6 +300,8 @@ func decodeLogFiles(f interface{}) ([]LogFile, error) {
 		case string:
 			lf := strings.Split(val, "=")
 			switch len(lf) {
+			case 3:
+				files = append(files, LogFile{Tag: lf[0], Hostname: lf[1], Path: lf[2]})
 			case 2:
 				files = append(files, LogFile{Tag: lf[0], Path: lf[1]})
 			case 1:
@@ -310,17 +313,19 @@ func decodeLogFiles(f interface{}) ([]LogFile, error) {
 		case map[interface{}]interface{}:
 			var (
 				tag  string
+				hostname string
 				path string
 			)
 
 			tag, _ = val["tag"].(string)
+			hostname, _ = val["hostname"].(string)
 			path, _ = val["path"].(string)
 
 			if path == "" {
 				return files, fmt.Errorf("Invalid log file %#v", val)
 			}
 
-			files = append(files, LogFile{Tag: tag, Path: path})
+			files = append(files, LogFile{Tag: tag, Hostname: hostname, Path: path})
 
 		default:
 			panic(vals)
