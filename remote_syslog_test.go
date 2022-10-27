@@ -77,6 +77,88 @@ func TestNewFileSeek(t *testing.T) {
 
 		packet := <-server.packets
 		assert.Equal(msg, packet.Message)
+		assert.Equal("testhost", packet.Hostname)
+	}
+}
+
+func TestCustomTag(t *testing.T) {
+	assert := assert.New(t)
+
+	// Close any existing channel and restart the testSyslogServer
+	server.closeCh <- struct{}{}
+	go server.serve()
+
+	// Add custom tag
+	config := testConfig()
+	config.Files = []LogFile {
+		{
+			Path: "tmp/*.log",
+			Tag: "customTag",
+		},
+	}
+
+	s := NewServer(config)
+	go s.Start()
+	defer s.Close()
+
+	// just a quick rest to get the server started
+	time.Sleep(1 * time.Second)
+
+	for _, msg := range []string{
+		"welcome to the jungle",
+		"we got alerts and logs",
+		"we got everything you want",
+		"as long as it's alerts and logs",
+	} {
+		file := tmpLogFile()
+		defer file.Close()
+
+		writeLog(file, msg)
+
+		packet := <-server.packets
+		assert.Equal(msg, packet.Message)
+		assert.Equal("customTag", packet.Tag)
+		assert.Equal("testhost", packet.Hostname)
+	}
+}
+
+func TestCustomHostname(t *testing.T) {
+	assert := assert.New(t)
+
+	// Close any existing channel and restart the testSyslogServer
+	server.closeCh <- struct{}{}
+	go server.serve()
+
+	// Add custom hostname
+	config := testConfig()
+	config.Files = []LogFile {
+		{
+			Path: "tmp/*.log",
+			Hostname: "custom.hostname",
+		},
+	}
+
+	s := NewServer(config)
+	go s.Start()
+	defer s.Close()
+
+	// just a quick rest to get the server started
+	time.Sleep(1 * time.Second)
+
+	for _, msg := range []string{
+		"welcome to the jungle",
+		"we got alerts and logs",
+		"we got everything you want",
+		"as long as it's alerts and logs",
+	} {
+		file := tmpLogFile()
+		defer file.Close()
+
+		writeLog(file, msg)
+
+		packet := <-server.packets
+		assert.Equal(msg, packet.Message)
+		assert.Equal("custom.hostname", packet.Hostname)
 	}
 }
 

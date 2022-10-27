@@ -273,6 +273,23 @@ destination:
 
 This functionality was introduced in version 0.17
 
+### Choosing hostname name
+
+To override the hostname, which is sent as the system's hostname by default,
+tell remote_syslog to set another hostname name using the `hostname` attribute
+in the configuration file:
+```
+files:
+  - path: /var/log/httpd/access_log
+    hostname: example.com
+destination:
+  host: logs.papertrailapp.com
+  port: 12345
+  protocol: tls
+```
+
+This is not supported by command line configurations.
+
 ## Troubleshooting
 
 ### Generate debug log

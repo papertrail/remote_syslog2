@@ -43,6 +43,11 @@ func TestRawConfig(t *testing.T) {
 			Tag:  "apache",
 			Path: "/var/log/httpd/access_log",
 		},
+		{
+			Tag:	"debian",
+			Path:	"/var/log/syslog",
+			Hostname: "myhost.mydomain.com",
+		},
 	})
 	assert.Equal(c.TcpMaxLineLength, 99991)
 	assert.Equal(c.NewFileCheckInterval, 10*time.Second)
