@@ -65,6 +65,7 @@ type Config struct {
 type LogFile struct {
 	Path string
 	Tag  string
+	AppendPath bool
 }
 
 func init() {
@@ -311,16 +312,18 @@ func decodeLogFiles(f interface{}) ([]LogFile, error) {
 			var (
 				tag  string
 				path string
+				appendPath bool
 			)
 
 			tag, _ = val["tag"].(string)
 			path, _ = val["path"].(string)
+			appendPath, _ = val["appendPath"].(bool)
 
 			if path == "" {
 				return files, fmt.Errorf("Invalid log file %#v", val)
 			}
 
-			files = append(files, LogFile{Tag: tag, Path: path})
+			files = append(files, LogFile{Tag: tag, Path: path, AppendPath: appendPath})
 
 		default:
 			panic(vals)
