@@ -4,7 +4,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -50,10 +52,12 @@ type Config struct {
 	TLS                  bool             `mapstructure:"tls"`
 	Files                []LogFile
 	Hostname             string
+	Domain               string
 	Severity             syslog.Priority
 	Facility             syslog.Priority
 	Poll                 bool
 	Destination          struct {
+		URI      string
 		Host     string
 		Port     int
 		Protocol string
@@ -63,8 +67,25 @@ type Config struct {
 }
 
 type LogFile struct {
-	Path string
-	Tag  string
+	Path          string
+	Tag           string
+	TagPattern    *regexp.Regexp
+	TagMatchIndex int
+}
+
+func (l *LogFile) TagFromFileName(fileName string) (string, bool) {
+	if l.TagPattern == nil {
+		if l.Tag == "" {
+			return path.Base(fileName), true
+		}
+		return l.Tag, true
+	}
+
+	if elems := l.TagPattern.FindStringSubmatch(fileName); len(elems) > l.TagMatchIndex {
+		return elems[l.TagMatchIndex], true
+	} else {
+		return "", false
+	}
 }
 
 func init() {
@@ -92,6 +113,9 @@ func initConfigAndFlags() {
 	flags.StringP("configfile", "c", defaultConfigFile, "Path to config")
 	config.BindPFlag("config_file", flags.Lookup("configfile"))
 
+	flags.String("dest-uri", "", "Destination as a URI, overrides dest-host, dest-port, and transport")
+	config.BindPFlag("destination.uri", flags.Lookup("dest-uri"))
+
 	flags.StringP("dest-host", "d", "", "Destination syslog hostname or IP")
 	config.BindPFlag("destination.host", flags.Lookup("dest-host"))
 
@@ -107,6 +131,9 @@ func initConfigAndFlags() {
 	hostname, _ := os.Hostname()
 	flags.String("hostname", hostname, "Local hostname to send from")
 	config.BindPFlag("hostname", flags.Lookup("hostname"))
+
+	flags.StringP("domain", "", "", "Domain suffix for hostname")
+	config.BindPFlag("domain", flags.Lookup("domain"))
 
 	flags.String("pid-file", "", "Location of the PID file")
 	config.BindPFlag("pid_file", flags.Lookup("pid-file"))
@@ -191,6 +218,7 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	// explicitly set destination fields since they are nested
+	c.Destination.URI = config.GetString("destination.uri")
 	c.Destination.Host = config.GetString("destination.host")
 	c.Destination.Port = config.GetInt("destination.port")
 	c.Destination.Protocol = config.GetString("destination.protocol")
@@ -223,6 +251,37 @@ func NewConfigFromEnv() (*Config, error) {
 }
 
 func (c *Config) Validate() error {
+	if c.Destination.URI != "" {
+		u, err := url.Parse(c.Destination.URI)
+		if err != nil {
+			return err
+		}
+
+		c.Destination.Host = u.Hostname()
+		c.Destination.Port, err = strconv.Atoi(u.Port())
+
+		if err != nil {
+			return err
+		}
+
+		sp := strings.SplitN(strings.ToLower(u.Scheme), "+", 2)
+
+		if sp[0] != "syslog" {
+			return fmt.Errorf("destination URI contains invalid protocol")
+		}
+
+		if len(sp) == 1 {
+			c.Destination.Protocol = "udp"
+		} else {
+			c.Destination.Protocol = sp[1]
+		}
+	}
+
+	if c.Domain != "" {
+		c.Hostname = strings.TrimRight(c.Hostname, ".") + "." + strings.TrimLeft(c.Domain, ".")
+		c.Domain = ""
+	}
+
 	if c.Destination.Host == "" {
 		return fmt.Errorf("No destination hostname specified")
 	}
@@ -284,6 +343,26 @@ func decodeRegexps(f interface{}) ([]*regexp.Regexp, error) {
 	return exps, nil
 }
 
+func decodeTagRegex(tag string) (*regexp.Regexp, int, error) {
+	r, err := regexp.Compile(tag[3:])
+	if err != nil {
+		return nil, 0, err
+	}
+	for i, n := range r.SubexpNames() {
+		if n == "tag" {
+			return r, i, nil
+		}
+	}
+	switch r.NumSubexp() {
+	case 0:
+		return r, 0, nil
+	case 1:
+		return r, 1, nil
+	default:
+		return nil, 0, errors.New("invalid tag expression: more than one sub-expression and none is named 'tag'")
+	}
+}
+
 func decodeLogFiles(f interface{}) ([]LogFile, error) {
 	var (
 		files []LogFile
@@ -300,7 +379,16 @@ func decodeLogFiles(f interface{}) ([]LogFile, error) {
 			lf := strings.Split(val, "=")
 			switch len(lf) {
 			case 2:
-				files = append(files, LogFile{Tag: lf[0], Path: lf[1]})
+				tag := lf[0]
+				if strings.HasPrefix(tag, "re:") {
+					r, idx, err := decodeTagRegex(tag)
+					if err != nil {
+						return files, err
+					}
+					files = append(files, LogFile{Tag: "", Path: lf[1], TagPattern: r, TagMatchIndex: idx})
+				} else {
+					files = append(files, LogFile{Tag: lf[0], Path: lf[1]})
+				}
 			case 1:
 				files = append(files, LogFile{Path: val})
 			default:

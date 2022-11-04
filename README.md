@@ -62,6 +62,8 @@ Configuration directives can also be specified as command-line arguments (below)
       -d, --dest-host string              Destination syslog hostname or IP
       -p, --dest-port int                 Destination syslog port (default 514)
       -t, --dest-token string             Destination ingestion token
+          --dest-uri string               Destination as a URI, overrides dest-host, dest-port, and transport
+          --domain string                 Domain suffix for hostname
           --eventmachine-tail             No action, provided for backwards compatibility
       -f, --facility string               Facility (default "user")
       -h, --help                          Display this help message
@@ -110,6 +112,21 @@ remote_syslog will daemonize by default.
 
 Additional information about init files (`init.d`, `supervisor`, `systemd` and `upstart`) are
 available [in the examples directory](examples/).
+
+
+## Deploy a kubernetes daemonset to forward container logs
+
+An example for a deployment as a [kubernetes daemonset](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)
+that consumes the containerd container logs is provided [in the examples directory](examples/k8s.and.containerd/).
+
+To install the daemonset on your cluster, using a pre-built container, edit the `papertrail-destination` secret inside
+`daemonset.yml` to point to the log server and port for your [papertrail account](https://papertrailapp.com/systems/setup?type=system&platform=unix) and optionally set the `domain` in the `papertrail-remote-syslog` configmap. Then apply the daemonset to your cluster:
+
+    $ kubectl apply -f examples/k8s.and.containerd/daemonset.yml
+
+Optionally you can build the container yourself:
+
+    $ docker build . -f examples/k8s.and.containerd/Dockerfile -t remote_syslog2:latest
 
 
 ## Sending messages securely ##
@@ -165,6 +182,12 @@ Here's an [advanced config](https://github.com/papertrail/remote_syslog2/blob/ma
 Provide `--hostname somehostname` or use the `hostname` configuration option:
 
     hostname: somehostname
+
+### Add domain suffix to hostname
+
+Provide `--domain some.f.q.d.n` or use the `domain` configuration option:
+
+`worker-1` becomes `worker-1.some.f.q.d.n`
 
 
 ### Detecting new files
@@ -272,6 +295,13 @@ destination:
 `remote_syslog apache=/var/log/httpd/access_log`
 
 This functionality was introduced in version 0.17
+
+#### Using regular expression matching to extract the "tag" from the file name
+
+remote_syslog allows for a regular expression to be provided for each pattern, to
+extract a meaningful name from the file names that are matched by a glob expression.
+
+`remote_syslog 're:containers/(?P<tag>.*)-.{64}.log=/var/log/containers/*.log'`
 
 ## Troubleshooting
 

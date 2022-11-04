@@ -162,6 +162,7 @@ func testConfig() *Config {
 		Severity:             severity,
 		Facility:             facility,
 		Destination: struct {
+			URI      string
 			Host     string
 			Port     int
 			Protocol string

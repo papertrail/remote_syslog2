@@ -86,3 +86,91 @@ func TestNoConfigFile(t *testing.T) {
 	assert.Equal("udp", c.Destination.Protocol)
 	assert.Equal("", c.Destination.Token)
 }
+
+func TestURIInConfig(t *testing.T) {
+	assert := assert.New(t)
+	initConfigAndFlags()
+
+	flags.Set("dest-uri", "syslog+tls://localhost:999")
+
+	c, err := NewConfigFromEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NoError(c.Validate())
+	assert.Equal("localhost", c.Destination.Host)
+	assert.Equal(999, c.Destination.Port)
+	assert.Equal("tls", c.Destination.Protocol)
+	assert.Equal("", c.Destination.Token)
+}
+
+func TestLogFileTagPatterns(t *testing.T) {
+	type tc struct {
+		pattern string
+		idx     int
+		file    string
+		tag     string
+		err     error
+		ok      bool
+	}
+	tcs := []tc{
+		{
+			`re:containers/(.*).log=/var/log/containers/*.log`,
+			1,
+			"/var/log/containers/azure-ip-masq-agent-aaaaa_kube-system_azure-ip-masq-agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.log",
+			"azure-ip-masq-agent-aaaaa_kube-system_azure-ip-masq-agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			nil,
+			true,
+		},
+		{
+			`re:(containers/)(?P<tag>.*)(.log)=/var/log/containers/*.log`,
+			2,
+			"/var/log/containers/azure-ip-masq-agent-aaaaa_kube-system_azure-ip-masq-agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.log",
+			"azure-ip-masq-agent-aaaaa_kube-system_azure-ip-masq-agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			nil,
+			true,
+		},
+		{
+			`re:containers/(?P<tag>.*)-.{64}\.log=/var/log/containers/*.log`,
+			1,
+			"/var/log/containers/azure-ip-masq-agent-aaaaa_kube-system_azure-ip-masq-agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.log",
+			"azure-ip-masq-agent-aaaaa_kube-system_azure-ip-masq-agent",
+			nil,
+			true,
+		},
+		{
+			`re:pods/[^/]+/([^/]+)/=/var/log/pods/*/*/*.log`,
+			1,
+			"/var/log/pods/kube-system_azure-ip-masq-agent-aaaaa_00000000-0000-0000-0000-000000000000/azure-ip-masq-agent/0.log",
+			"azure-ip-masq-agent",
+			nil,
+			true,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.pattern, func(t *testing.T) {
+			t.Helper()
+
+			lfs, err := decodeLogFiles([]interface{}{tc.pattern})
+			if tc.err == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tc.err.Error())
+				return
+			}
+			assert.Len(t, lfs, 1)
+			lf := lfs[0]
+			assert.NotNil(t, lf.TagPattern)
+			assert.Equal(t, lf.TagMatchIndex, tc.idx)
+			tag, ok := lfs[0].TagFromFileName(tc.file)
+			if tc.ok {
+				assert.True(t, ok)
+				assert.Equal(t, tag, tc.tag)
+			} else {
+				assert.False(t, ok)
+			}
+		})
+	}
+}
