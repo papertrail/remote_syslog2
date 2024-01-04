@@ -6,6 +6,7 @@ files:
     tag: site2/access_log
   - path: /var/log/httpd/site2/error_log
     tag: site2/error_log
+    severity: err   # Note: valid severity includes: emerg, alert, crit, err, warn, notice, info, debug
   - /opt/misc/*.log
   - /home/**/*.log
   - /var/log/mysqld.log

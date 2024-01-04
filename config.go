@@ -63,8 +63,9 @@ type Config struct {
 }
 
 type LogFile struct {
-	Path string
-	Tag  string
+	Path     string
+	Tag      string
+	Severity syslog.Priority
 }
 
 func init() {
@@ -309,18 +310,22 @@ func decodeLogFiles(f interface{}) ([]LogFile, error) {
 
 		case map[interface{}]interface{}:
 			var (
-				tag  string
-				path string
+				tag      string
+				path     string
+				severity syslog.Priority
 			)
 
 			tag, _ = val["tag"].(string)
 			path, _ = val["path"].(string)
 
+			severity_input, _ := val["severity"].(string)
+			severity, _ = syslog.Severity(severity_input)
+
 			if path == "" {
 				return files, fmt.Errorf("Invalid log file %#v", val)
 			}
 
-			files = append(files, LogFile{Tag: tag, Path: path})
+			files = append(files, LogFile{Tag: tag, Path: path, Severity: severity})
 
 		default:
 			panic(vals)
